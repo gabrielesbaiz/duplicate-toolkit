@@ -201,6 +201,7 @@
 
     homeWrap.classList.toggle("hidden", !isHome);
     docWrap.classList.toggle("hidden", isHome);
+    document.body.dataset.route = isHome ? "home" : "guide";
 
     rail.forEach(function (a) { a.removeAttribute("aria-current"); });
     navLinks.forEach(function (a) { a.classList.remove("here"); });

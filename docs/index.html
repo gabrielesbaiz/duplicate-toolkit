@@ -149,6 +149,8 @@
       </div>
     </div>
   </div>
+
+  <p class="deeper"><a href="#/commands">The relations command, in full <span aria-hidden="true">&rarr;</span></a></p>
 </section>
 
 <section class="wrap sec reveal">
@@ -168,6 +170,8 @@
             -&gt;quietly();
     }
 }</pre>
+
+  <p class="deeper"><a href="#/options">Every option, and what it does <span aria-hidden="true">&rarr;</span></a></p>
 </section>
 
 <section class="wrap sec" id="h-strategies">
@@ -205,6 +209,8 @@
 <s>// or invert it — everything not listed is skipped</s>
 <i>DuplicateOptions</i>::make()-&gt;onlyRelations(<u>'versions'</u>);</pre>
   </div>
+
+  <p class="deeper"><a href="#/strategies">Relation strategies, in full <span aria-hidden="true">&rarr;</span></a></p>
 </section>
 
 <section class="wrap sec">
@@ -239,6 +245,8 @@ $copy-&gt;update([
     -&gt;uniqueColumns(<u>'name'</u>)              <s>// "Widget" → "Widget (1)", in one query</s>
     -&gt;excludeColumnsMatching(<u>'/_count$/'</u>);  <s>// counters are wrong the moment they are copied</s></pre>
   </div>
+
+  <p class="deeper"><a href="#/attributes">Attribute overrides, in full <span aria-hidden="true">&rarr;</span></a></p>
 </section>
 
 <section class="wrap sec" id="h-result">
@@ -283,6 +291,8 @@ foreach ($descriptions as $description) {
     <i>Duplicate</i>::of($product)-&gt;execute();
 }</pre>
   </div>
+
+  <p class="deeper"><a href="#/result">The result object, in full <span aria-hidden="true">&rarr;</span></a></p>
 </section>
 
 <section class="wrap sec">
@@ -316,6 +326,8 @@ foreach ($descriptions as $description) {
       </div>
     </div>
   </div>
+
+  <p class="deeper"><a href="#/depth">Depth and cycles, in full <span aria-hidden="true">&rarr;</span></a></p>
 </section>
 
 <section class="wrap sec" id="h-commands">
@@ -337,6 +349,8 @@ foreach ($descriptions as $description) {
     --depth=2 \
     --dry-run</pre>
   </div>
+
+  <p class="deeper"><a href="#/commands">Every command, with every flag <span aria-hidden="true">&rarr;</span></a></p>
 </section>
 
 <section class="wrap sec">
@@ -356,6 +370,8 @@ foreach ($descriptions as $description) {
       <dt>tested</dt><dd>PHP 8.3 and 8.4 &times; Laravel 12 and 13 <s>· prefer-lowest and prefer-stable</s></dd>
     </dl>
   </div>
+
+  <p class="deeper"><a href="#/discovery">How relation discovery works <span aria-hidden="true">&rarr;</span></a></p>
 </section>
 
 <section class="wrap sec" id="h-install">
@@ -380,6 +396,8 @@ foreach ($descriptions as $description) {
       </div>
     </div>
   </div>
+
+  <p class="deeper"><a href="#/install">The full installation guide <span aria-hidden="true">&rarr;</span></a></p>
 </section>
 
 <section class="wrap sec" id="h-support">
@@ -1436,7 +1454,6 @@ $copy = $model-&gt;duplicate(<em>fn</em> ($o) =&gt; $o-&gt;suffix(<u>'name'</u>,
   </div>
   <div class="colo">
     <span>MIT licensed &middot; Built by Gabriele Sbaiz</span>
-    <span>3 strategies &middot; 4 commands &middot; PHPStan level <b>max</b></span>
   </div>
 </footer>
 
