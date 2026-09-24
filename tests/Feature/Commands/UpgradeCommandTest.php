@@ -146,3 +146,36 @@ it('fails for a missing directory', function (): void {
     $this->artisan('duplicate-toolkit:upgrade', ['path' => 'nope', '--no-interaction' => true])
         ->assertFailed();
 });
+
+it('does not rewrite Eloquent saveQuietly outside the options method', function (): void {
+    $path = writeLegacy('MixedSaveQuietly.php', <<<'PHP'
+    <?php
+
+    use Gabrielesbaiz\DuplicateToolkit\Options\DuplicateOptions;
+    use Gabrielesbaiz\DuplicateToolkit\Traits\HasDuplicates;
+
+    class MixedSaveQuietly
+    {
+        use HasDuplicates;
+
+        public function getDuplicateOptions(): DuplicateOptions
+        {
+            return DuplicateOptions::instance()->saveQuietly();
+        }
+
+        public function touchSomething($model)
+        {
+            // Eloquent's own method, which must survive untouched.
+            $model->forceFill(['x' => 1])->saveQuietly();
+        }
+    }
+    PHP);
+
+    Artisan::call('duplicate-toolkit:upgrade', ['path' => 'legacy', '--no-interaction' => true]);
+
+    $contents = (string) file_get_contents($path);
+
+    expect($contents)
+        ->toContain('DuplicateOptions::make()->quietly()')
+        ->toContain("forceFill(['x' => 1])->saveQuietly()");
+});

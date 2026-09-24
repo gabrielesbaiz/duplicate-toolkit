@@ -12,8 +12,9 @@ return [
     | Model Namespaces
     |--------------------------------------------------------------------------
     |
-    | Namespaces scanned by the Artisan commands when resolving a short model
-    | name such as "Product" into a fully qualified class name.
+    | Here you may list the namespaces the Artisan commands scan when they
+    | resolve a short model name such as "Product" into a fully qualified
+    | class name. They are searched in the order they are given.
     |
     */
 
@@ -27,20 +28,26 @@ return [
     | Depth
     |--------------------------------------------------------------------------
     |
-    | How many levels of relations are followed. 0 duplicates only the root
-    | model. Exceeding this limit throws a MaxDepthExceededException.
+    | This value controls how many levels of relations are followed. A depth
+    | of zero duplicates the root model alone, a depth of one also follows its
+    | direct relations, and so on.
+    |
+    | The default of one is what most applications mean by "duplicate this
+    | record". Raise it deliberately, since on a real schema a second level
+    | often reaches transactional tables that merely reference the record
+    | without belonging to it. A preview will show you before you commit.
     |
     */
 
-    'max_depth' => 3,
+    'max_depth' => 1,
 
     /*
     |--------------------------------------------------------------------------
     | Chunk Size
     |--------------------------------------------------------------------------
     |
-    | Related records are streamed with lazyById() in chunks of this size so
-    | that huge relation trees never load entirely into memory.
+    | Related records are streamed in chunks of this size so that even a very
+    | large relation tree is never loaded into memory all at once.
     |
     */
 
@@ -51,8 +58,9 @@ return [
     | Save Quietly
     |--------------------------------------------------------------------------
     |
-    | When true, duplicated records are persisted without firing Eloquent
-    | model events. Can be overridden per duplication with ->quietly().
+    | When enabled, duplicated records are persisted without firing any of the
+    | Eloquent model events. This may be overridden for a single duplication
+    | with the "quietly" option.
     |
     */
 
@@ -63,8 +71,9 @@ return [
     | Unique Columns
     |--------------------------------------------------------------------------
     |
-    | Strategy used to make columns declared via ->uniqueColumns() unique, and
-    | the format applied by the NumericSuffix strategy.
+    | Here you may configure the strategy used to make the value of a column
+    | declared as unique unique again, along with the format that the numeric
+    | suffix strategy appends to the original value.
     |
     */
 
@@ -77,8 +86,9 @@ return [
     | Globally Excluded Columns
     |--------------------------------------------------------------------------
     |
-    | Columns and column patterns never copied onto the duplicate. Timestamps
-    | and soft delete columns are always excluded by the engine itself.
+    | These columns and column patterns are never copied onto a duplicate. The
+    | timestamps and the soft delete column are always excluded by the engine
+    | itself, so they do not need to be listed here.
     |
     */
 
@@ -93,9 +103,9 @@ return [
     | Default Relation Strategy
     |--------------------------------------------------------------------------
     |
-    | Fallback strategy for relation types without an explicit configuration.
-    | Child relations default to Copy, pivoted relations to Reference and
-    | parent relations are always referenced.
+    | These strategies apply to any relation that the model itself says
+    | nothing about. Child relations are duplicated, pivoted relations are
+    | re-attached, and parent relations are always left where they are.
     |
     */
 
@@ -108,8 +118,9 @@ return [
     | Provenance
     |--------------------------------------------------------------------------
     |
-    | When ->trackProvenance() is used, the source model key is written to this
-    | column on the duplicate, provided the column exists on the table.
+    | When provenance tracking is enabled, the key of the source record is
+    | written to this column on the duplicate, provided that the column
+    | actually exists on the table being written to.
     |
     */
 
@@ -121,9 +132,10 @@ return [
     |--------------------------------------------------------------------------
     |
     | Relations are discovered by reflecting on method return types, which is
-    | fast and free of side effects. Enable "invoke_untyped" only if you have
-    | legacy relation methods without a return type; those methods will then
-    | be invoked during discovery.
+    | fast and entirely free of side effects. You should only enable the
+    | "invoke_untyped" option if your models still declare relation methods
+    | without a return type, since those methods are then called during
+    | discovery in order to identify them.
     |
     */
 
@@ -137,7 +149,8 @@ return [
     | Soft Deletes
     |--------------------------------------------------------------------------
     |
-    | Whether trashed related records are copied alongside the duplicate.
+    | This value determines whether trashed related records are copied along
+    | with the duplicate, or quietly left behind.
     |
     */
 
@@ -148,8 +161,9 @@ return [
     | Media Library
     |--------------------------------------------------------------------------
     |
-    | Copy spatie/laravel-medialibrary collections onto the duplicate. Silently
-    | ignored when the package is not installed.
+    | When enabled, the media library collections of the source record are
+    | copied onto the duplicate. This option is quietly ignored when the media
+    | library package is not installed.
     |
     */
 
@@ -162,7 +176,9 @@ return [
     | Queue
     |--------------------------------------------------------------------------
     |
-    | Connection and queue used by Gabrielesbaiz\DuplicateToolkit\Jobs\DuplicateModel.
+    | Here you may configure the connection and the queue that a duplication
+    | dispatched to the background is sent to. Leaving them null falls back to
+    | the defaults of your application.
     |
     */
 

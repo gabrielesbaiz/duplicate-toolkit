@@ -42,11 +42,15 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 /**
  * The duplication engine.
  *
- * Registered as a singleton so applications can decorate or swap it. It keeps
- * no state between runs: everything mutable lives in the DuplicateContext.
+ * It is registered as a singleton so that an application may decorate or
+ * replace it. Nothing is kept between runs: everything mutable lives on the
+ * DuplicateContext that each run creates for itself.
  */
 class Duplicator
 {
+    /**
+     * Create a new duplicator instance.
+     */
     public function __construct(
         protected RelationInspector $inspector,
         protected Config $config,
@@ -55,12 +59,14 @@ class Duplicator
     ) {}
 
     /**
-     * Duplicate a model and return the full result.
+     * Duplicate a model and return the full result of the run.
      *
      * @template TModel of Model
      *
      * @param  TModel  $source
      * @return DuplicateResult<TModel>
+     *
+     * @throws DuplicateToolkitException
      */
     public function run(Model $source, ?DuplicateOptions $options = null): DuplicateResult
     {
@@ -81,7 +87,7 @@ class Duplicator
         }
 
         $context = new DuplicateContext(
-            maxDepth: $options->getDepth() ?? Cast::toInt($this->config->get('duplicate-toolkit.max_depth'), 3),
+            maxDepth: $options->getDepth() ?? Cast::toInt($this->config->get('duplicate-toolkit.max_depth'), 1),
             dryRun: $options->isDryRun(),
             strictDepth: $options->hasStrictDepth(),
         );
@@ -108,8 +114,10 @@ class Duplicator
     }
 
     /**
-     * Run the duplication in a transaction. A dry run performs every write and
-     * then rolls the whole thing back, so the reported plan is exact.
+     * Run the duplication inside a transaction.
+     *
+     * A dry run performs every write and then rolls the whole thing back, so
+     * the plan it reports is exactly what a real run would have produced.
      *
      * @param  Closure(): Model  $callback
      */
@@ -131,7 +139,7 @@ class Duplicator
     }
 
     /**
-     * Duplicate a single model plus, recursively, its relations.
+     * Duplicate a single model and then, recursively, its relations.
      *
      * @template TModel of Model
      *
@@ -188,8 +196,11 @@ class Duplicator
     }
 
     /**
-     * Columns never copied: timestamps, soft deletes, globally configured
-     * columns, pattern matches and anything the caller excluded.
+     * Get the columns that must never be copied onto the duplicate.
+     *
+     * Beyond whatever the caller excluded, we always drop the timestamps and
+     * the soft delete column so that the duplicate is born as a fresh record
+     * rather than inheriting the history of the row it came from.
      *
      * @return array<int, string>
      */
@@ -225,6 +236,9 @@ class Duplicator
         return array_values(array_unique(array_filter($excluded)));
     }
 
+    /**
+     * Apply the configured attribute overrides to the duplicate.
+     */
     protected function applyMutators(Model $duplicate, Model $source, DuplicateOptions $options): void
     {
         foreach ($options->getMutators() as $mutator) {
@@ -232,6 +246,9 @@ class Duplicator
         }
     }
 
+    /**
+     * Write the key of the source record onto the duplicate.
+     */
     protected function applyProvenance(Model $duplicate, Model $source, DuplicateOptions $options): void
     {
         if (! $options->shouldTrackProvenance()) {
@@ -249,8 +266,11 @@ class Duplicator
     }
 
     /**
-     * Resolve unique column values with a single query per column instead of
-     * the 1.x query-per-attempt loop, never colliding with the source row.
+     * Give the declared unique columns a value no other row is using.
+     *
+     * Here we resolve each column with a single query rather than the 1.x
+     * loop that queried once per attempt, and the source row is included in
+     * the comparison so a duplicate can never collide with its own original.
      */
     protected function applyUniqueColumns(Model $duplicate, Model $source, DuplicateOptions $options): void
     {
@@ -282,7 +302,7 @@ class Duplicator
     }
 
     /**
-     * Lowest free "value (n)", resolved with one query.
+     * Get the lowest free "value (n)" for a column, using a single query.
      */
     protected function nextNumericSuffix(Model $source, string $column, string $value, string $format): string
     {
@@ -305,11 +325,17 @@ class Duplicator
         return $value.sprintf($format, $index);
     }
 
+    /**
+     * Escape the wildcards a value would otherwise contribute to a like clause.
+     */
     protected function escapeLike(string $value): string
     {
         return str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $value);
     }
 
+    /**
+     * Persist the duplicate, quietly when that is what was asked for.
+     */
     protected function save(Model $duplicate, DuplicateOptions $options): void
     {
         $quietly = $options->shouldSaveQuietly()
@@ -318,10 +344,9 @@ class Duplicator
         $quietly ? $duplicate->saveQuietly() : $duplicate->save();
     }
 
-    // -------------------------------------------------------------------
-    // Relations
-    // -------------------------------------------------------------------
-
+    /**
+     * Duplicate every relation of the source model onto the duplicate.
+     */
     protected function duplicateRelations(
         Model $source,
         Model $duplicate,
@@ -359,8 +384,10 @@ class Duplicator
     }
 
     /**
-     * Whether stopping here would leave relations uncopied. Only consulted in
-     * strict depth mode, so the extra queries are opt in.
+     * Determine if stopping here would leave related records uncopied.
+     *
+     * This is only consulted in strict depth mode, which keeps the extra query
+     * per relation entirely opt in.
      */
     protected function hasCopyableRelations(Model $source, DuplicateOptions $options): bool
     {
@@ -386,6 +413,9 @@ class Duplicator
         return false;
     }
 
+    /**
+     * Get the configured strategy for a relation of the given kind.
+     */
     protected function defaultStrategyFor(RelationMeta $meta): RelationStrategy
     {
         $configured = $this->config->get($meta->kind->isPivoted()
@@ -404,8 +434,10 @@ class Duplicator
     }
 
     /**
-     * Attach the original related records to the duplicate. Only pivoted
-     * relations can be referenced; child rows are owned by the source.
+     * Attach the original related records to the duplicate.
+     *
+     * Only pivoted relations may be referenced, since a child row is owned by
+     * the record it hangs off and cannot belong to two of them at once.
      */
     protected function referenceRelation(Model $source, Model $duplicate, RelationMeta $meta): int
     {
@@ -487,6 +519,9 @@ class Duplicator
         return $copied;
     }
 
+    /**
+     * Replicate the records behind a pivoted relation and attach the copies.
+     */
     protected function copyPivotedRelation(
         Model $source,
         Model $duplicate,
@@ -525,6 +560,8 @@ class Duplicator
     }
 
     /**
+     * Get the pivoted relation instance for the given model.
+     *
      * @return BelongsToMany<Model, Model, Pivot>
      */
     protected function belongsToMany(Model $model, RelationMeta $meta): BelongsToMany
@@ -536,8 +573,10 @@ class Duplicator
     }
 
     /**
-     * Pivot attributes worth carrying over: everything declared with
-     * withPivot(), minus the keys and timestamps the relation manages itself.
+     * Get the pivot attributes worth carrying over to the new pivot row.
+     *
+     * Everything declared with withPivot() qualifies, minus the keys and the
+     * timestamps that the relation already manages on our behalf.
      *
      * @param  BelongsToMany<Model, Model, Pivot>  $relation
      * @return array<string, mixed>
@@ -569,6 +608,8 @@ class Duplicator
     }
 
     /**
+     * Get the query used to read the records behind a relation.
+     *
      * @param  Relation<Model, Model, *>  $relation
      * @return Builder<Model>
      */
@@ -579,8 +620,8 @@ class Duplicator
         $withTrashed = $options->shouldCopyTrashed()
             ?? Cast::toBool($this->config->get('duplicate-toolkit.copy_trashed'));
 
-        // withTrashed() is forwarded through Builder::__call, so call the real
-        // typed API it delegates to instead.
+        // The withTrashed() method is forwarded through Builder::__call, so
+        // here we reach for the typed API it delegates to instead.
         if ($withTrashed && $this->usesSoftDeletes($relation->getRelated())) {
             $query->withoutGlobalScope(SoftDeletingScope::class);
         }
@@ -588,6 +629,9 @@ class Duplicator
         return $query;
     }
 
+    /**
+     * Hand a relation over to the handler the caller registered for it.
+     */
     protected function runCustomHandler(
         DuplicatesRelation|Closure $handler,
         Model $source,
@@ -604,10 +648,9 @@ class Duplicator
         $handler($source, $duplicate, $meta, $context);
     }
 
-    // -------------------------------------------------------------------
-    // Extras
-    // -------------------------------------------------------------------
-
+    /**
+     * Copy the media library collections of the source onto the duplicate.
+     */
     protected function copyMedia(Model $source, Model $duplicate, DuplicateOptions $options): void
     {
         $enabled = $options->shouldCopyMedia()
@@ -628,12 +671,8 @@ class Duplicator
         }
     }
 
-    // -------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------
-
     /**
-     * Merge the model's own options with any inherited and caller overrides.
+     * Merge the options of the model with the inherited and caller overrides.
      */
     protected function resolveOptions(Model $model, ?DuplicateOptions $overrides, ?DuplicateOptions $inherited = null): DuplicateOptions
     {
@@ -647,8 +686,10 @@ class Duplicator
     }
 
     /**
-     * Public accessor for the options a model declares, used by the commands
-     * to show what would happen before anything runs.
+     * Get the options a model declares for itself.
+     *
+     * The commands reach for this to show what a duplication would do before
+     * a single row is written.
      */
     public function modelOptionsFor(Model $model): DuplicateOptions
     {
@@ -656,14 +697,26 @@ class Duplicator
     }
 
     /**
-     * The options declared by the model itself.
+     * Resolve the options declared by the model itself.
      *
-     * The Duplicatable interface is the documented contract, but the trait
-     * alone is enough: checking for the method keeps working for models that
-     * use HasDuplicates without implementing the interface.
+     * The Duplicatable contract is the documented route, but the trait alone
+     * is enough: looking the method up directly keeps working for a model that
+     * uses HasDuplicates without ever implementing the interface.
      */
     protected function modelOptions(Model $model): DuplicateOptions
     {
+        // A model still declaring the 1.x getDuplicateOptions() method has not
+        // been migrated yet, so that method remains the authority on how it is
+        // duplicated. The codemod removes it, after which the checks below take
+        // over.
+        if (method_exists($model, 'getDuplicateOptions')) {
+            $legacy = $model->getDuplicateOptions();
+
+            if ($legacy instanceof DuplicateOptions) {
+                return $legacy;
+            }
+        }
+
         if ($model instanceof Duplicatable) {
             return $model->duplicateOptions();
         }
@@ -679,6 +732,9 @@ class Duplicator
         return DuplicateOptions::make();
     }
 
+    /**
+     * Get the unique strategy the configuration asks for.
+     */
     protected function configuredUniqueStrategy(): UniqueStrategy
     {
         $configured = $this->config->get('duplicate-toolkit.unique_strategy');
@@ -692,19 +748,27 @@ class Duplicator
             : UniqueStrategy::NumericSuffix;
     }
 
+    /**
+     * Determine if the given model is soft deleting.
+     */
     protected function usesSoftDeletes(Model $model): bool
     {
         return in_array(SoftDeletes::class, class_uses_recursive($model), true);
     }
 
+    /**
+     * Strip the table name from a qualified column.
+     */
     protected function unqualify(string $column): string
     {
         return str_contains($column, '.') ? (string) Str::afterLast($column, '.') : $column;
     }
 
     /**
-     * Fire one of the custom "duplicating"/"duplicated" model events, when the
-     * model uses the HasDuplicates trait.
+     * Fire one of the custom "duplicating" or "duplicated" model events.
+     *
+     * Only a model using the HasDuplicates trait knows how to fire them, so
+     * anything else is left alone.
      */
     protected function fireDuplicateEvent(Model $model, string $event, bool $halt = true): mixed
     {
@@ -713,6 +777,9 @@ class Duplicator
             : null;
     }
 
+    /**
+     * Run the callback once the surrounding transaction has committed.
+     */
     protected function afterCommit(Model $model, Closure $callback): void
     {
         $connection = $this->db->connection($model->getConnectionName());

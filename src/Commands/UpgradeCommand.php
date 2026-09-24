@@ -12,20 +12,30 @@ use function Laravel\Prompts\confirm;
 use Symfony\Component\Finder\Finder;
 
 /**
- * Rewrite 1.x usages of the package to the 2.0 API.
+ * Rewrites 1.x usages of the package to the 2.0 API.
  *
- * Anything needing human judgement is reported rather than rewritten.
+ * Anything that needs human judgement is reported rather than rewritten.
  */
 class UpgradeCommand extends Command
 {
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
     protected $signature = 'duplicate-toolkit:upgrade
                             {path=app : Directory to scan}
                             {--dry-run : Report the changes without writing them}';
 
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
     protected $description = 'Upgrade duplicate-toolkit 1.x usages to the 2.0 API';
 
     /**
-     * Straight search and replace rewrites.
+     * The rewrites that are a straight search and replace.
      *
      * @var array<string, string>
      */
@@ -34,11 +44,26 @@ class UpgradeCommand extends Command
         'Gabrielesbaiz\\DuplicateToolkit\\Options\\DuplicateOptions' => 'Gabrielesbaiz\\DuplicateToolkit\\DuplicateOptions',
         'function getDuplicateOptions(' => 'function duplicateOptions(',
         'DuplicateOptions::instance()' => 'DuplicateOptions::make()',
-        '->disableDeepDuplication()' => '->shallow()',
-        '->saveQuietly()' => '->quietly()',
         '->saveAsDuplicate()' => '->duplicate()',
     ];
 
+    /**
+     * The rewrites confined to the body of the options method.
+     *
+     * Eloquent has a saveQuietly() method of its own, so replacing that name
+     * across a whole file would silently rewrite a real call that has nothing
+     * to do with this package.
+     *
+     * @var array<string, string>
+     */
+    protected array $optionsReplacements = [
+        '->disableDeepDuplication()' => '->shallow()',
+        '->saveQuietly()' => '->quietly()',
+    ];
+
+    /**
+     * Execute the console command.
+     */
     public function handle(): int
     {
         $path = base_path(Cast::toString($this->argument('path'), 'app'));
@@ -77,6 +102,8 @@ class UpgradeCommand extends Command
                 $updated = str_replace($search, $replace, $updated);
             }
 
+            $updated = $this->rewriteOptionsMethod($updated);
+
             $relative = str_replace(base_path().DIRECTORY_SEPARATOR, '', $realPath);
 
             $warnings = [...$warnings, ...$this->inspect($relative, $original)];
@@ -108,8 +135,7 @@ class UpgradeCommand extends Command
     }
 
     /**
-     * Whether the command may prompt. Honours both the Symfony interactivity
-     * flag and an explicit --no-interaction.
+     * Determine if the command is allowed to prompt for input.
      */
     protected function shouldPrompt(): bool
     {
@@ -117,7 +143,27 @@ class UpgradeCommand extends Command
     }
 
     /**
-     * Cases the codemod deliberately refuses to touch.
+     * Apply the options-only rewrites inside the duplicateOptions() body.
+     */
+    protected function rewriteOptionsMethod(string $contents): string
+    {
+        $pattern = '/(function\s+(?:get)?[dD]uplicateOptions\s*\([^)]*\)[^{]*\{)(.*?)(\n\s{0,8}\})/s';
+
+        $result = preg_replace_callback($pattern, function (array $matches): string {
+            $body = $matches[2];
+
+            foreach ($this->optionsReplacements as $search => $replace) {
+                $body = str_replace($search, $replace, $body);
+            }
+
+            return $matches[1].$body.$matches[3];
+        }, $contents);
+
+        return $result ?? $contents;
+    }
+
+    /**
+     * Get the warnings for the cases the codemod refuses to touch.
      *
      * @return array<int, string>
      */
@@ -153,6 +199,8 @@ class UpgradeCommand extends Command
     }
 
     /**
+     * Report what the codemod would do, or has just done.
+     *
      * @param  array<string, string>  $changed
      * @param  array<int, string>  $warnings
      */
