@@ -19,6 +19,11 @@ class InspectRelationsCommand extends Command
     use ResolvesModels;
 
     /**
+     * Whether one of the printed relations belongs to the media library.
+     */
+    protected bool $sawMediaRelation = false;
+
+    /**
      * The name and signature of the console command.
      *
      * @var string
@@ -87,11 +92,17 @@ class InspectRelationsCommand extends Command
         ));
 
         $this->newLine();
-        $this->components->bulletList([
+        $bullets = [
             '<fg=green>copy</> duplicates the related records',
             '<fg=yellow>reference</> attaches the existing related records',
             '<fg=gray>skip</> leaves the relation alone',
-        ]);
+        ];
+
+        if ($this->sawMediaRelation) {
+            $bullets[] = 'media collections are copied by the media library pass, not by their relation';
+        }
+
+        $this->components->bulletList($bullets);
 
         return self::SUCCESS;
     }
@@ -152,9 +163,21 @@ class InspectRelationsCommand extends Command
      */
     protected function strategyFor(Model $model, RelationMeta $meta): RelationStrategy
     {
-        return app(Duplicator::class)
+        $declared = app(Duplicator::class)
             ->modelOptionsFor($model)
-            ->strategyFor($meta->name) ?? $meta->defaultStrategy();
+            ->strategyFor($meta->name);
+
+        if ($declared instanceof RelationStrategy) {
+            return $declared;
+        }
+
+        if (app(RelationInspector::class)->isMediaLibraryRelation($meta)) {
+            $this->sawMediaRelation = true;
+
+            return RelationStrategy::Skip;
+        }
+
+        return $meta->defaultStrategy();
     }
 
     /**

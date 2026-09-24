@@ -24,6 +24,31 @@ return new class extends Migration
             $table->softDeletes();
         });
 
+        Schema::create('galleries', function (Blueprint $table): void {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
+        });
+
+        Schema::create('media', function (Blueprint $table): void {
+            $table->id();
+            $table->morphs('model');
+            $table->uuid()->nullable()->unique();
+            $table->string('collection_name');
+            $table->string('name');
+            $table->string('file_name');
+            $table->string('mime_type')->nullable();
+            $table->string('disk');
+            $table->string('conversions_disk')->nullable();
+            $table->unsignedBigInteger('size');
+            $table->json('manipulations');
+            $table->json('custom_properties');
+            $table->json('generated_conversions');
+            $table->json('responsive_images');
+            $table->unsignedInteger('order_column')->nullable()->index();
+            $table->nullableTimestamps();
+        });
+
         Schema::create('versions', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('product_id');
@@ -109,7 +134,7 @@ return new class extends Migration
         foreach ([
             'documents', 'categories', 'labelables', 'labels', 'notes',
             'product_tag', 'tags', 'suppliers', 'settings', 'descriptions',
-            'versions', 'products',
+            'media', 'galleries', 'versions', 'products',
         ] as $table) {
             Schema::dropIfExists($table);
         }

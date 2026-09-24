@@ -36,6 +36,7 @@ A full rewrite. See [UPGRADE.md](UPGRADE.md) for the migration path and the `dup
 - `#[DuplicateRelations]` attribute for declaring strategies on the model class.
 - Artisan commands: `duplicate-toolkit:relations`, `duplicate-toolkit:duplicate`, `duplicate-toolkit:make-options`, `duplicate-toolkit:upgrade`.
 - Soft delete awareness (`withTrashed()`), UUID/ULID key support, provenance column (`trackProvenance()`), and optional media library copying.
+- The media library relation is left to the media pass: it is never walked as an ordinary relation, so a duplicate gets one media row per original, with its file copied, instead of a second row pointing at the original's directory. A strategy declared for that relation — `copyRelations('media')` or `excludeRelations('media')` — turns the media pass on or off, and `withMedia()` wins over both.
 - A publishable config file.
 
 ### Changed

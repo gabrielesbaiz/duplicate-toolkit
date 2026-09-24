@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionNamedType;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Throwable;
 
 /**
@@ -87,6 +89,33 @@ class RelationInspector
             $this->for($model),
             static fn (RelationMeta $meta): bool => $meta->kind->isDuplicatable(),
         );
+    }
+
+    /**
+     * Determine if a relation is the one the media library owns.
+     *
+     * The media library keeps its own rows, whose files live in a directory
+     * named after the row's key. Cloning such a row through the generic
+     * relation walk therefore produces a record pointing at a directory that
+     * belongs to the original, while the media pass of the duplicator copies
+     * both the row and the file. Recognising the relation lets the engine
+     * leave it to that pass.
+     */
+    public function isMediaLibraryRelation(RelationMeta $meta): bool
+    {
+        if (! interface_exists(HasMedia::class) || ! class_exists(Media::class)) {
+            return false;
+        }
+
+        if ($meta->relatedClass === null) {
+            return false;
+        }
+
+        if (! is_a($meta->parentClass, HasMedia::class, true)) {
+            return false;
+        }
+
+        return is_a($meta->relatedClass, Media::class, true);
     }
 
     /**
