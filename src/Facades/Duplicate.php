@@ -24,6 +24,9 @@ use Illuminate\Support\Facades\Facade;
  */
 final class Duplicate extends Facade
 {
+    /**
+     * Get the registered name of the component.
+     */
     protected static function getFacadeAccessor(): string
     {
         return DuplicateManager::class;

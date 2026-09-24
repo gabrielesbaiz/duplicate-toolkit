@@ -14,5 +14,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 interface DuplicatesRelation
 {
+    /**
+     * Duplicate the given relation from the source model onto the duplicate.
+     */
     public function handle(Model $source, Model $duplicate, RelationMeta $relation, DuplicateContext $context): void;
 }

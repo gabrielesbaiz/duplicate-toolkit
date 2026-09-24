@@ -10,11 +10,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
 /**
- * Immutable description of a single relation discovered on a model class.
+ * An immutable description of a single relation discovered on a model class.
  */
 final readonly class RelationMeta
 {
     /**
+     * Create a new relation metadata instance.
+     *
      * @param  class-string<Model>  $parentClass
      * @param  class-string<Relation<*, *, *>>  $type
      * @param  class-string<Model>|null  $relatedClass
@@ -27,18 +29,24 @@ final readonly class RelationMeta
         public RelationKind $kind,
     ) {}
 
+    /**
+     * Get the class basename of the relation type.
+     */
     public function shortType(): string
     {
         return class_basename($this->type);
     }
 
+    /**
+     * Get the class basename of the related model.
+     */
     public function relatedBasename(): string
     {
         return $this->relatedClass === null ? '?' : class_basename($this->relatedClass);
     }
 
     /**
-     * The strategy applied when the user expressed no preference.
+     * Get the strategy applied when the caller expressed no preference.
      */
     public function defaultStrategy(): RelationStrategy
     {
@@ -54,6 +62,8 @@ final readonly class RelationMeta
     }
 
     /**
+     * Get the instance as an array.
+     *
      * @return array{name: string, type: string, related: string|null, kind: string, default: string}
      */
     public function toArray(): array

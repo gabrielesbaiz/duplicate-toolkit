@@ -9,14 +9,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Events\Dispatchable;
 
 /**
- * Fired after the transaction commits, carrying the full result including the
- * old key => new key map.
+ * Fired once the transaction has committed, carrying the full result of the
+ * run including the old key to new key map.
  */
 final readonly class Duplicated
 {
     use Dispatchable;
 
     /**
+     * Create a new event instance.
+     *
      * @param  DuplicateResult<covariant Model>  $result
      */
     public function __construct(

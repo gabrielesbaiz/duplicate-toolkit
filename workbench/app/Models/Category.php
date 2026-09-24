@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Self referencing, to exercise cycle detection.
+ * A self referencing model, used to exercise cycle detection.
  */
 class Category extends Model
 {

@@ -16,6 +16,9 @@ use Illuminate\Database\Eloquent\Model;
  */
 class DuplicateManager
 {
+    /**
+     * Create a new duplicate manager instance.
+     */
     public function __construct(
         protected Duplicator $duplicator,
         protected RelationInspector $inspector,
@@ -23,7 +26,7 @@ class DuplicateManager
     ) {}
 
     /**
-     * Start a fluent duplication.
+     * Begin fluently configuring a duplication of the given model.
      *
      * @template TModel of Model
      *
@@ -39,7 +42,7 @@ class DuplicateManager
     }
 
     /**
-     * Duplicate immediately.
+     * Duplicate the given model immediately.
      *
      * @template TModel of Model
      *
@@ -52,6 +55,8 @@ class DuplicateManager
     }
 
     /**
+     * Get every relation defined on the given model.
+     *
      * @return array<string, RelationMeta>
      */
     public function relations(Model $model): array
@@ -60,6 +65,8 @@ class DuplicateManager
     }
 
     /**
+     * Get only the relations of the given model that may be duplicated.
+     *
      * @return array<string, RelationMeta>
      */
     public function duplicatableRelations(Model $model): array
@@ -68,6 +75,8 @@ class DuplicateManager
     }
 
     /**
+     * Get the relation tree of the given model.
+     *
      * @return array<string, array{meta: RelationMeta, children: array<string, mixed>}>
      */
     public function tree(Model $model, int $depth = 1): array
@@ -75,6 +84,9 @@ class DuplicateManager
         return $this->inspector->tree($model, $depth);
     }
 
+    /**
+     * Get the underlying relation inspector.
+     */
     public function inspector(): RelationInspector
     {
         return $this->inspector;
@@ -84,6 +96,8 @@ class DuplicateManager
      * Resolve "Product" or "App\Models\Product" into a model class name.
      *
      * @return class-string<Model>
+     *
+     * @throws ModelResolutionException
      */
     public function resolveModelClass(string $name): string
     {

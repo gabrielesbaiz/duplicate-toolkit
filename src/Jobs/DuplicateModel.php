@@ -19,9 +19,9 @@ use Illuminate\Queue\SerializesModels;
 /**
  * Duplicate a model in the background.
  *
- * Options are serialised with the job, so closures registered via mutate(),
- * beforeSave() or afterSave() cannot be used here; configure those on the
- * model's duplicateOptions() instead.
+ * The options travel with the job through serialization, so closures given to
+ * mutate(), beforeSave() or afterSave() cannot be used here. Declare those on
+ * the model's own duplicateOptions() method instead.
  */
 class DuplicateModel implements ShouldQueue
 {
@@ -31,8 +31,14 @@ class DuplicateModel implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
+    /**
+     * The number of times the job may be attempted.
+     */
     public int $tries = 1;
 
+    /**
+     * Create a new job instance.
+     */
     public function __construct(
         public Model $model,
         public ?DuplicateOptions $options = null,
@@ -49,6 +55,9 @@ class DuplicateModel implements ShouldQueue
         }
     }
 
+    /**
+     * Execute the job.
+     */
     public function handle(Duplicator $duplicator): void
     {
         if ($this->batch()?->cancelled()) {
@@ -59,6 +68,8 @@ class DuplicateModel implements ShouldQueue
     }
 
     /**
+     * Get the middleware the job should pass through.
+     *
      * @return array<int, object>
      */
     public function middleware(): array
@@ -69,6 +80,8 @@ class DuplicateModel implements ShouldQueue
     }
 
     /**
+     * Get the tags that should be assigned to the job.
+     *
      * @return array<int, string>
      */
     public function tags(): array
@@ -76,6 +89,9 @@ class DuplicateModel implements ShouldQueue
         return ['duplicate-toolkit', $this->lockKey()];
     }
 
+    /**
+     * Get the key that prevents two duplications of the same record overlapping.
+     */
     protected function lockKey(): string
     {
         return $this->model::class.':'.Cast::toString($this->model->getKey());

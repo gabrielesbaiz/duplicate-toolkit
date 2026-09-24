@@ -17,15 +17,15 @@ use Illuminate\Events\QueuedClosure;
 /**
  * Adds duplication to an Eloquent model.
  *
- * The model should also implement Gabrielesbaiz\DuplicateToolkit\Contracts\Duplicatable;
- * this trait already provides the default duplicateOptions() implementation.
+ * The model should also implement the Duplicatable contract. This trait
+ * already supplies the default duplicateOptions() implementation it asks for.
  *
  * @phpstan-require-extends Model
  */
 trait HasDuplicates
 {
     /**
-     * Override in your model to describe how it should be duplicated.
+     * Get the options describing how this model should be duplicated.
      */
     public function duplicateOptions(): DuplicateOptions
     {
@@ -35,7 +35,7 @@ trait HasDuplicates
     /**
      * Duplicate this record and return the new model.
      *
-     * Pass a callback to refine the options for this call only:
+     * A callback may be given to refine the options for this call alone:
      *
      *   $product->duplicate(fn (DuplicateOptions $o) => $o->suffix('name', ' - COPY'));
      *
@@ -50,8 +50,7 @@ trait HasDuplicates
     }
 
     /**
-     * Duplicate this record and return the full result, including the
-     * old key => new key map.
+     * Duplicate this record and return the full result of the run.
      *
      * @param  DuplicateOptions|Closure(DuplicateOptions): DuplicateOptions|null  $options
      * @return DuplicateResult<static>
@@ -65,7 +64,7 @@ trait HasDuplicates
     }
 
     /**
-     * Start a fluent duplication.
+     * Begin fluently configuring a duplication of this record.
      *
      * @param  DuplicateOptions|Closure(DuplicateOptions): DuplicateOptions|null  $options
      * @return PendingDuplicate<static>
@@ -83,7 +82,7 @@ trait HasDuplicates
     }
 
     /**
-     * The relations discovered on this model, keyed by relation name.
+     * Get the duplicatable relations of this model, keyed by relation name.
      *
      * @return array<string, RelationMeta>
      */
@@ -93,8 +92,9 @@ trait HasDuplicates
     }
 
     /**
-     * Register a "duplicating" model event listener. Returning false from the
-     * listener aborts the duplication.
+     * Register a "duplicating" model event listener.
+     *
+     * Returning false from the listener aborts the duplication.
      *
      * @param  QueuedClosure|(callable(static): mixed)|array{0: object|string, 1: string}|class-string  $callback
      */
@@ -114,7 +114,7 @@ trait HasDuplicates
     }
 
     /**
-     * Called by the Duplicator to fire the custom model events.
+     * Fire one of the custom duplication model events.
      *
      * @internal
      */

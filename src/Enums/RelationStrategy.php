@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Gabrielesbaiz\DuplicateToolkit\Enums;
 
 /**
- * How a single relation is handled while duplicating a model.
+ * The way a single relation is handled while duplicating a model.
  */
 enum RelationStrategy: string
 {
@@ -25,6 +25,9 @@ enum RelationStrategy: string
      */
     case Skip = 'skip';
 
+    /**
+     * Get the human readable label for the strategy.
+     */
     public function label(): string
     {
         return match ($this) {
@@ -34,6 +37,9 @@ enum RelationStrategy: string
         };
     }
 
+    /**
+     * Get a short description of what the strategy does.
+     */
     public function describe(): string
     {
         return match ($this) {

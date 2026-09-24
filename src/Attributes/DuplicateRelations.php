@@ -8,7 +8,7 @@ use Attribute;
 use Gabrielesbaiz\DuplicateToolkit\Enums\RelationStrategy;
 
 /**
- * Declares, on the model class itself, how its relations should be treated.
+ * Declare on the model class itself how each of its relations is treated.
  *
  * #[DuplicateRelations(copy: ['versions'], reference: ['tags'], skip: ['logs'])]
  */
@@ -27,6 +27,8 @@ final class DuplicateRelations
     ) {}
 
     /**
+     * Get the declared relations as a map of relation name to strategy.
+     *
      * @return array<string, RelationStrategy>
      */
     public function toStrategies(): array

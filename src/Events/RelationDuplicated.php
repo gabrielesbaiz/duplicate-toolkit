@@ -13,6 +13,9 @@ final readonly class RelationDuplicated
 {
     use Dispatchable;
 
+    /**
+     * Create a new event instance.
+     */
     public function __construct(
         public Model $source,
         public Model $duplicate,

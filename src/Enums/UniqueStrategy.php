@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Gabrielesbaiz\DuplicateToolkit\Enums;
 
 /**
- * How a value is made unique when a column is declared via uniqueColumns().
+ * The way a value is made unique when a column is declared via uniqueColumns().
  */
 enum UniqueStrategy: string
 {

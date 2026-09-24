@@ -17,26 +17,28 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
 /**
- * Classification of a relation, used to pick a sane default strategy.
+ * The classification of a relation, used to pick a sane default strategy.
  */
 enum RelationKind: string
 {
-    /** hasOne, morphOne */
+    /** The hasOne and morphOne relations. */
     case ChildSingle = 'child_single';
 
-    /** hasMany, morphMany */
+    /** The hasMany and morphMany relations. */
     case ChildMultiple = 'child_multiple';
 
-    /** belongsTo, morphTo */
+    /** The belongsTo and morphTo relations. */
     case Parental = 'parent';
 
-    /** belongsToMany, morphToMany */
+    /** The belongsToMany and morphToMany relations. */
     case Pivoted = 'pivoted';
 
-    /** hasOneThrough, hasManyThrough */
+    /** The hasOneThrough and hasManyThrough relations. */
     case Through = 'through';
 
     /**
+     * Classify the given relation class.
+     *
      * @param  class-string<Relation<*, *, *>>  $relationClass
      */
     public static function fromRelationClass(string $relationClass): ?self
@@ -56,24 +58,35 @@ enum RelationKind: string
         };
     }
 
+    /**
+     * Determine if the relation points at records owned by the model.
+     */
     public function isChild(): bool
     {
         return $this === self::ChildSingle || $this === self::ChildMultiple;
     }
 
+    /**
+     * Determine if the relation is backed by a pivot table.
+     */
     public function isPivoted(): bool
     {
         return $this === self::Pivoted;
     }
 
+    /**
+     * Determine if the relation points at a record that owns the model.
+     */
     public function isParent(): bool
     {
         return $this === self::Parental;
     }
 
     /**
-     * Relations that can never be duplicated safely: duplicating a parent or a
-     * "through" relation would create rows the duplicate does not own.
+     * Determine if the relation may be duplicated safely.
+     *
+     * Duplicating a parent or a "through" relation would create rows that the
+     * duplicate does not own, so only children and pivoted relations qualify.
      */
     public function isDuplicatable(): bool
     {

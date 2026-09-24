@@ -14,12 +14,11 @@ use function Laravel\Prompts\search;
 use SplFileInfo;
 use Symfony\Component\Finder\Finder;
 
-/**
- * Shared model discovery and resolution for the package commands.
- */
 trait ResolvesModels
 {
     /**
+     * Resolve a short or fully qualified model name into a class name.
+     *
      * @return class-string<Model>
      */
     protected function resolveModelClass(string $name): string
@@ -57,7 +56,7 @@ trait ResolvesModels
     }
 
     /**
-     * Every Eloquent model class found under the configured namespaces.
+     * Get every Eloquent model class found under the configured namespaces.
      *
      * @return array<int, class-string<Model>>
      */
@@ -95,6 +94,8 @@ trait ResolvesModels
     }
 
     /**
+     * Get the directory backing each of the given model namespaces.
+     *
      * @param  array<int, string>  $namespaces
      * @return array<string, string>
      */
@@ -122,6 +123,8 @@ trait ResolvesModels
     }
 
     /**
+     * Get the class a discovered file declares, if it declares one at all.
+     *
      * @return class-string|null
      */
     protected function classFromFile(SplFileInfo $file, string $namespace, string $directory): ?string
