@@ -17,6 +17,9 @@ use Spatie\LaravelPackageTools\PackageServiceProvider;
 
 class DuplicateToolkitServiceProvider extends PackageServiceProvider
 {
+    /**
+     * Configure the package.
+     */
     public function configurePackage(Package $package): void
     {
         $package
@@ -30,6 +33,36 @@ class DuplicateToolkitServiceProvider extends PackageServiceProvider
             ]);
     }
 
+    /**
+     * The class aliases kept for the 1.x names.
+     *
+     * These are registered here rather than through Composer so that a 1.x
+     * application boots far enough to run duplicate-toolkit:upgrade, the very
+     * command that removes the need for them. They go away in 3.0.
+     *
+     * @var array<class-string, string>
+     */
+    protected array $aliases = [
+        DuplicateOptions::class => 'Gabrielesbaiz\\DuplicateToolkit\\Options\\DuplicateOptions',
+    ];
+
+    /**
+     * Register the package services.
+     */
+    public function register(): void
+    {
+        foreach ($this->aliases as $class => $legacy) {
+            if (! class_exists($legacy, false)) {
+                class_alias($class, $legacy);
+            }
+        }
+
+        parent::register();
+    }
+
+    /**
+     * Register the bindings the package resolves out of the container.
+     */
     public function packageRegistered(): void
     {
         $this->app->singleton(RelationInspector::class, function (Application $app): RelationInspector {
@@ -47,6 +80,8 @@ class DuplicateToolkitServiceProvider extends PackageServiceProvider
     }
 
     /**
+     * Get the services provided by the provider.
+     *
      * @return array<int, string>
      */
     public function provides(): array

@@ -79,7 +79,7 @@ it('leaves the source relations untouched', function (): void {
 it('recurses into grandchildren', function (): void {
     $product = makeProduct();
 
-    $copy = $product->duplicate();
+    $copy = $product->duplicate(fn (DuplicateOptions $o): DuplicateOptions => $o->depth(2));
 
     $copiedV1 = $copy->versions()->where('name', 'v1')->firstOrFail();
 
@@ -300,7 +300,7 @@ it('exposes the old key to new key map', function (): void {
 it('counts the records it created', function (): void {
     $product = makeProduct();
 
-    $result = $product->duplicateWithResult();
+    $result = $product->duplicateWithResult(fn (DuplicateOptions $o): DuplicateOptions => $o->depth(2));
 
     expect($result->count(Product::class))->toBe(1)
         ->and($result->count(Version::class))->toBe(2)
@@ -311,7 +311,7 @@ it('counts the records it created', function (): void {
 it('writes nothing during a preview', function (): void {
     $product = makeProduct();
 
-    $plan = Duplicate::of($product)->preview();
+    $plan = Duplicate::of($product)->depth(2)->preview();
 
     expect($plan->dryRun)->toBeTrue()
         ->and($plan->count())->toBe(7)
@@ -324,7 +324,7 @@ it('does not recurse forever on a self referencing model', function (): void {
     $child = $parent->children()->create(['name' => 'child']);
     $child->children()->create(['name' => 'grandchild']);
 
-    $copy = $parent->duplicate();
+    $copy = $parent->duplicate(fn (DuplicateOptions $o): DuplicateOptions => $o->depth(5));
 
     expect($copy->children()->count())->toBe(1)
         ->and(Category::count())->toBe(6);
@@ -377,4 +377,15 @@ it('honours duplicateOptions on a model that only uses the trait', function (): 
     expect($copy->sku)->toBeNull()
         ->and($copy->versions()->count())->toBe(0)
         ->and($copy->setting()->count())->toBe(1);
+});
+
+it('follows one level of relations by default, as 1.x did', function (): void {
+    $product = makeProduct();
+
+    // No depth() is given anywhere, so the shipped default decides.
+    $copy = $product->duplicate();
+
+    // Two descriptions, meaning the grandchildren were left uncopied.
+    expect($copy->versions()->count())->toBe(2)
+        ->and(Description::count())->toBe(2);
 });

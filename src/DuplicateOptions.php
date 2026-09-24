@@ -16,92 +16,150 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 
 /**
- * Immutable, fully typed description of how a model should be duplicated.
+ * An immutable, fully typed description of how a model should be duplicated.
  *
  * Every mutator clones the instance, so an options object returned from a
- * model's duplicateOptions() can be safely derived from without leaking state
- * between duplication runs.
+ * model's duplicateOptions() may be derived from freely without one
+ * duplication run leaking state into the next.
  */
 final class DuplicateOptions
 {
-    /** @var array<int, string> */
+    /**
+     * The columns that must not be copied onto the duplicate.
+     *
+     * @var array<int, string>
+     */
     private array $excludedColumns = [];
 
-    /** @var array<int, string> */
+    /**
+     * The patterns matching columns that must not be copied onto the duplicate.
+     *
+     * @var array<int, string>
+     */
     private array $excludedColumnPatterns = [];
 
-    /** @var array<int, string> */
+    /**
+     * The columns whose value must stay unique across the table.
+     *
+     * @var array<int, string>
+     */
     private array $uniqueColumns = [];
 
-    /** @var array<int, AttributeMutator> */
+    /**
+     * The attribute overrides applied to the duplicate before it is saved.
+     *
+     * @var array<int, AttributeMutator>
+     */
     private array $mutators = [];
 
     /**
-     * Relation name (optionally dot-nested) => strategy.
+     * The strategy for each relation, keyed by a plain or dot-nested name.
      *
      * @var array<string, RelationStrategy>
      */
     private array $relationStrategies = [];
 
     /**
-     * Relation name (optionally dot-nested) => nested options or a callback
-     * receiving the related model's own options.
+     * The nested options for each relation, keyed by a plain or dot-nested name.
+     *
+     * A value may be an options object or a callback that receives the related
+     * model's own options.
      *
      * @var array<string, DuplicateOptions|Closure(DuplicateOptions): DuplicateOptions>
      */
     private array $relationOptions = [];
 
     /**
+     * The custom handlers registered for individual relations.
+     *
      * @var array<string, DuplicatesRelation|Closure>
      */
     private array $relationHandlers = [];
 
-    /** @var array<int, string>|null */
+    /**
+     * The only relations that may be duplicated, if the caller named any.
+     *
+     * @var array<int, string>|null
+     */
     private ?array $relationAllowList = null;
 
-    /** @var array<int, Closure(Model, Model): void> */
+    /**
+     * The callbacks invoked on the duplicate before it is saved.
+     *
+     * @var array<int, Closure(Model, Model): void>
+     */
     private array $beforeSave = [];
 
-    /** @var array<int, Closure(Model, Model): void> */
+    /**
+     * The callbacks invoked on the duplicate once it has been saved.
+     *
+     * @var array<int, Closure(Model, Model): void>
+     */
     private array $afterSave = [];
 
+    /**
+     * The number of relation levels to follow.
+     */
     private ?int $depth = null;
 
+    /**
+     * Indicates if the duplicate is saved without firing model events.
+     */
     private ?bool $saveQuietly = null;
 
+    /**
+     * Indicates if trashed related records are copied as well.
+     */
     private ?bool $copyTrashed = null;
 
+    /**
+     * Indicates if media library collections are copied as well.
+     */
     private ?bool $copyMedia = null;
 
+    /**
+     * Indicates if the key of the source record is written to the duplicate.
+     */
     private bool $trackProvenance = false;
 
+    /**
+     * The column the key of the source record is written to.
+     */
     private ?string $provenanceColumn = null;
 
+    /**
+     * The strategy used to make unique columns unique.
+     */
     private ?UniqueStrategy $uniqueStrategy = null;
 
+    /**
+     * Indicates if every write is rolled back once the run completes.
+     */
     private bool $dryRun = false;
 
+    /**
+     * Indicates if exceeding the configured depth throws instead of truncating.
+     */
     private bool $strictDepth = false;
 
+    /**
+     * Create a new options instance.
+     */
     public static function make(): self
     {
         return new self;
     }
 
     /**
-     * Backwards friendly alias of make().
+     * Create a new options instance under the 1.x name.
      */
     public static function instance(): self
     {
         return new self;
     }
 
-    // -------------------------------------------------------------------
-    // Columns
-    // -------------------------------------------------------------------
-
     /**
-     * Columns that must not be copied onto the duplicate.
+     * Exclude the given columns from the duplicate.
      *
      * @param  string|array<int, string>  ...$columns
      */
@@ -117,7 +175,7 @@ final class DuplicateOptions
     }
 
     /**
-     * Exclude every column matching a regular expression, e.g. '/_count$/'.
+     * Exclude every column matching one of the given regular expressions.
      */
     public function excludeColumnsMatching(string ...$patterns): self
     {
@@ -131,7 +189,7 @@ final class DuplicateOptions
     }
 
     /**
-     * Columns whose value must stay unique across the table.
+     * Declare the columns whose value must stay unique across the table.
      *
      * @param  string|array<int, string>  ...$columns
      */
@@ -146,6 +204,9 @@ final class DuplicateOptions
         return $clone;
     }
 
+    /**
+     * Set the strategy used to make the unique columns unique.
+     */
     public function uniqueUsing(UniqueStrategy $strategy): self
     {
         $clone = clone $this;
@@ -154,13 +215,11 @@ final class DuplicateOptions
         return $clone;
     }
 
-    // -------------------------------------------------------------------
-    // Attribute overrides
-    // -------------------------------------------------------------------
-
     /**
-     * Force attribute values on the duplicate. Values may be closures
-     * receiving (mixed $current, Model $duplicate, Model $source).
+     * Force attribute values on the duplicate.
+     *
+     * A value may be a closure receiving the current value, the duplicate and
+     * the source model, so it can be derived from the record being copied.
      *
      * @param  array<string, mixed>  $attributes
      */
@@ -175,6 +234,9 @@ final class DuplicateOptions
         return $clone;
     }
 
+    /**
+     * Append a string to a column on the duplicate.
+     */
     public function suffix(string $column, string $suffix): self
     {
         $clone = clone $this;
@@ -183,6 +245,9 @@ final class DuplicateOptions
         return $clone;
     }
 
+    /**
+     * Prepend a string to a column on the duplicate.
+     */
     public function prefix(string $column, string $prefix): self
     {
         $clone = clone $this;
@@ -191,6 +256,9 @@ final class DuplicateOptions
         return $clone;
     }
 
+    /**
+     * Search and replace within a column on the duplicate.
+     */
     public function replace(string $column, string $search, string $replace): self
     {
         $clone = clone $this;
@@ -200,6 +268,8 @@ final class DuplicateOptions
     }
 
     /**
+     * Derive the value of a column on the duplicate from a callback.
+     *
      * @param  Closure(mixed, Model, Model): mixed  $callback
      */
     public function mutate(string $column, Closure $callback): self
@@ -210,13 +280,11 @@ final class DuplicateOptions
         return $clone;
     }
 
-    // -------------------------------------------------------------------
-    // Relations
-    // -------------------------------------------------------------------
-
     /**
-     * Configure one relation. The second argument is either a strategy or a
-     * callback refining the related model's own options.
+     * Configure a single relation.
+     *
+     * The second argument is either a strategy or a callback refining the
+     * options the related model declares for itself.
      *
      * @param  RelationStrategy|DuplicateOptions|Closure(DuplicateOptions): DuplicateOptions  $strategy
      */
@@ -237,7 +305,7 @@ final class DuplicateOptions
     }
 
     /**
-     * Duplicate only these relations; every other relation is skipped.
+     * Duplicate only the given relations, skipping every other one.
      *
      * @param  string|array<int, string>  ...$relations
      */
@@ -257,6 +325,8 @@ final class DuplicateOptions
     }
 
     /**
+     * Leave the given relations alone.
+     *
      * @param  string|array<int, string>  ...$relations
      */
     public function excludeRelations(string|array ...$relations): self
@@ -287,6 +357,8 @@ final class DuplicateOptions
     }
 
     /**
+     * Duplicate the related records of the given relations.
+     *
      * @param  string|array<int, string>  ...$relations
      */
     public function copyRelations(string|array ...$relations): self
@@ -301,7 +373,7 @@ final class DuplicateOptions
     }
 
     /**
-     * Columns excluded on a per-relation basis.
+     * Exclude columns on a per-relation basis.
      *
      * @param  array<string, array<int, string>>  $columns
      */
@@ -318,7 +390,7 @@ final class DuplicateOptions
     }
 
     /**
-     * Unique columns on a per-relation basis.
+     * Declare unique columns on a per-relation basis.
      *
      * @param  array<string, array<int, string>>  $columns
      */
@@ -347,10 +419,9 @@ final class DuplicateOptions
         return $clone;
     }
 
-    // -------------------------------------------------------------------
-    // Behaviour
-    // -------------------------------------------------------------------
-
+    /**
+     * Set how many levels of relations are followed.
+     */
     public function depth(int $depth): self
     {
         $clone = clone $this;
@@ -360,7 +431,7 @@ final class DuplicateOptions
     }
 
     /**
-     * Duplicate the root model only.
+     * Duplicate the root model only, leaving every relation alone.
      */
     public function shallow(): self
     {
@@ -368,7 +439,27 @@ final class DuplicateOptions
     }
 
     /**
-     * Throw instead of silently truncating when the relation tree is deeper
+     * Save the duplicate without firing Eloquent model events.
+     *
+     * @deprecated 2.0 Use quietly(). Removed in 3.0.
+     */
+    public function saveQuietly(bool $quietly = true): self
+    {
+        return $this->quietly($quietly);
+    }
+
+    /**
+     * Duplicate the root model only, leaving every relation alone.
+     *
+     * @deprecated 2.0 Use shallow(). Removed in 3.0.
+     */
+    public function disableDeepDuplication(): self
+    {
+        return $this->shallow();
+    }
+
+    /**
+     * Throw rather than silently truncate when the relation tree runs deeper
      * than the configured depth.
      */
     public function strictDepth(bool $strict = true): self
@@ -379,6 +470,9 @@ final class DuplicateOptions
         return $clone;
     }
 
+    /**
+     * Save the duplicate without firing Eloquent model events.
+     */
     public function quietly(bool $quietly = true): self
     {
         $clone = clone $this;
@@ -387,6 +481,9 @@ final class DuplicateOptions
         return $clone;
     }
 
+    /**
+     * Copy the trashed related records alongside the duplicate.
+     */
     public function withTrashed(bool $withTrashed = true): self
     {
         $clone = clone $this;
@@ -395,6 +492,9 @@ final class DuplicateOptions
         return $clone;
     }
 
+    /**
+     * Copy the media library collections onto the duplicate.
+     */
     public function withMedia(bool $withMedia = true): self
     {
         $clone = clone $this;
@@ -403,6 +503,9 @@ final class DuplicateOptions
         return $clone;
     }
 
+    /**
+     * Write the key of the source record onto the duplicate.
+     */
     public function trackProvenance(?string $column = null): self
     {
         $clone = clone $this;
@@ -412,6 +515,9 @@ final class DuplicateOptions
         return $clone;
     }
 
+    /**
+     * Perform every write and then roll the whole run back.
+     */
     public function dryRun(bool $dryRun = true): self
     {
         $clone = clone $this;
@@ -421,6 +527,8 @@ final class DuplicateOptions
     }
 
     /**
+     * Register a callback to run on the duplicate before it is saved.
+     *
      * @param  Closure(Model, Model): void  $callback
      */
     public function beforeSave(Closure $callback): self
@@ -432,6 +540,8 @@ final class DuplicateOptions
     }
 
     /**
+     * Register a callback to run on the duplicate once it has been saved.
+     *
      * @param  Closure(Model, Model): void  $callback
      */
     public function afterSave(Closure $callback): self
@@ -443,7 +553,7 @@ final class DuplicateOptions
     }
 
     /**
-     * Merge another options object on top of this one. The incoming values win.
+     * Merge another options object on top of this one, letting it win.
      */
     public function merge(self $other): self
     {
@@ -472,118 +582,183 @@ final class DuplicateOptions
         return $clone;
     }
 
-    // -------------------------------------------------------------------
-    // Accessors (no magic __get: everything is typed and analysable)
-    // -------------------------------------------------------------------
-
-    /** @return array<int, string> */
+    /**
+     * Get the columns that must not be copied onto the duplicate.
+     *
+     * @return array<int, string>
+     */
     public function getExcludedColumns(): array
     {
         return $this->excludedColumns;
     }
 
-    /** @return array<int, string> */
+    /**
+     * Get the patterns matching columns that must not be copied.
+     *
+     * @return array<int, string>
+     */
     public function getExcludedColumnPatterns(): array
     {
         return $this->excludedColumnPatterns;
     }
 
-    /** @return array<int, string> */
+    /**
+     * Get the columns whose value must stay unique across the table.
+     *
+     * @return array<int, string>
+     */
     public function getUniqueColumns(): array
     {
         return $this->uniqueColumns;
     }
 
-    /** @return array<int, AttributeMutator> */
+    /**
+     * Get the attribute overrides applied to the duplicate.
+     *
+     * @return array<int, AttributeMutator>
+     */
     public function getMutators(): array
     {
         return $this->mutators;
     }
 
-    /** @return array<string, RelationStrategy> */
+    /**
+     * Get the strategy declared for each relation.
+     *
+     * @return array<string, RelationStrategy>
+     */
     public function getRelationStrategies(): array
     {
         return $this->relationStrategies;
     }
 
-    /** @return array<int, string>|null */
+    /**
+     * Get the only relations that may be duplicated, if any were named.
+     *
+     * @return array<int, string>|null
+     */
     public function getRelationAllowList(): ?array
     {
         return $this->relationAllowList;
     }
 
-    /** @return array<string, DuplicateOptions|Closure(DuplicateOptions): DuplicateOptions> */
+    /**
+     * Get the nested options declared for each relation.
+     *
+     * @return array<string, DuplicateOptions|Closure(DuplicateOptions): DuplicateOptions>
+     */
     public function getRelationOptions(): array
     {
         return $this->relationOptions;
     }
 
-    /** @return array<string, DuplicatesRelation|Closure> */
+    /**
+     * Get the custom handlers registered for individual relations.
+     *
+     * @return array<string, DuplicatesRelation|Closure>
+     */
     public function getRelationHandlers(): array
     {
         return $this->relationHandlers;
     }
 
-    /** @return array<int, Closure(Model, Model): void> */
+    /**
+     * Get the callbacks invoked before the duplicate is saved.
+     *
+     * @return array<int, Closure(Model, Model): void>
+     */
     public function getBeforeSaveCallbacks(): array
     {
         return $this->beforeSave;
     }
 
-    /** @return array<int, Closure(Model, Model): void> */
+    /**
+     * Get the callbacks invoked once the duplicate has been saved.
+     *
+     * @return array<int, Closure(Model, Model): void>
+     */
     public function getAfterSaveCallbacks(): array
     {
         return $this->afterSave;
     }
 
+    /**
+     * Get the number of relation levels to follow.
+     */
     public function getDepth(): ?int
     {
         return $this->depth;
     }
 
+    /**
+     * Determine if the duplicate is saved without firing model events.
+     */
     public function shouldSaveQuietly(): ?bool
     {
         return $this->saveQuietly;
     }
 
+    /**
+     * Determine if trashed related records are copied as well.
+     */
     public function shouldCopyTrashed(): ?bool
     {
         return $this->copyTrashed;
     }
 
+    /**
+     * Determine if media library collections are copied as well.
+     */
     public function shouldCopyMedia(): ?bool
     {
         return $this->copyMedia;
     }
 
+    /**
+     * Determine if the key of the source record is written to the duplicate.
+     */
     public function shouldTrackProvenance(): bool
     {
         return $this->trackProvenance;
     }
 
+    /**
+     * Get the column the key of the source record is written to.
+     */
     public function getProvenanceColumn(): ?string
     {
         return $this->provenanceColumn;
     }
 
+    /**
+     * Get the strategy used to make the unique columns unique.
+     */
     public function getUniqueStrategy(): ?UniqueStrategy
     {
         return $this->uniqueStrategy;
     }
 
+    /**
+     * Determine if every write is rolled back once the run completes.
+     */
     public function isDryRun(): bool
     {
         return $this->dryRun;
     }
 
+    /**
+     * Determine if exceeding the configured depth should throw.
+     */
     public function hasStrictDepth(): bool
     {
         return $this->strictDepth;
     }
 
     /**
-     * Strategy for one relation, honouring the allow list, or null when the
-     * caller expressed no preference.
+     * Get the strategy for one relation, honouring the allow list.
+     *
+     * Null is returned when the caller expressed no preference at all, which
+     * leaves the model attribute and the configured default to decide.
      */
     public function strategyFor(string $relation): ?RelationStrategy
     {
@@ -599,8 +774,10 @@ final class DuplicateOptions
     }
 
     /**
-     * Options declared for a nested relation, plus any deeper "a.b" entries
-     * rebased onto the child.
+     * Get the options declared for a nested relation.
+     *
+     * Any deeper "a.b" entries are rebased onto the child, so a strategy set
+     * on "versions.descriptions" reaches the descriptions of each version.
      */
     public function forRelation(string $relation): ?self
     {
