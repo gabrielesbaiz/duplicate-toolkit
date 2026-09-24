@@ -20,21 +20,30 @@ use function Laravel\Prompts\multiselect;
 
 use ReflectionClass;
 
-/**
- * Generate a duplicateOptions() method on a model from an interactive
- * relation picker.
- */
 class MakeDuplicateOptionsCommand extends Command
 {
     use ResolvesModels;
 
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
     protected $signature = 'duplicate-toolkit:make-options
                             {model? : The model class, fully qualified or short (e.g. Product)}
                             {--print : Print the generated code instead of writing it}
                             {--force : Overwrite an existing duplicateOptions() method}';
 
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
     protected $description = 'Generate a duplicateOptions() method for a model';
 
+    /**
+     * Execute the console command.
+     */
     public function handle(RelationInspector $inspector): int
     {
         $argument = $this->argument('model');
@@ -97,8 +106,7 @@ class MakeDuplicateOptionsCommand extends Command
     }
 
     /**
-     * Whether the command may prompt. Honours both the Symfony interactivity
-     * flag and an explicit --no-interaction.
+     * Determine if the command is allowed to prompt for input.
      */
     protected function shouldPrompt(): bool
     {
@@ -106,6 +114,8 @@ class MakeDuplicateOptionsCommand extends Command
     }
 
     /**
+     * Render the duplicateOptions() method for the given choices.
+     *
      * @param  class-string<Model>  $class
      * @param  array<int, string>  $copy
      * @param  array<int, string>  $reference
@@ -144,7 +154,10 @@ class MakeDuplicateOptionsCommand extends Command
     }
 
     /**
-     * Denormalised counter columns are almost never worth copying.
+     * Get the columns that look like denormalised counters.
+     *
+     * A cached count belongs to the row it was computed for, so copying one
+     * onto a duplicate only ever produces a number that is already wrong.
      *
      * @return array<int, string>
      */
@@ -161,6 +174,8 @@ class MakeDuplicateOptionsCommand extends Command
     }
 
     /**
+     * Render a list of values as PHP source.
+     *
      * @param  array<int, string>  $values
      */
     protected function exportList(array $values): string
@@ -169,6 +184,8 @@ class MakeDuplicateOptionsCommand extends Command
     }
 
     /**
+     * Write the generated method into the source file of the model.
+     *
      * @param  class-string<Model>  $class
      */
     protected function write(string $class, string $code): int
@@ -215,6 +232,9 @@ class MakeDuplicateOptionsCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Add the imports the generated method relies on.
+     */
     protected function ensureImports(string $contents): string
     {
         foreach ([Duplicatable::class, HasDuplicates::class, DuplicateOptions::class] as $import) {
@@ -233,6 +253,8 @@ class MakeDuplicateOptionsCommand extends Command
     }
 
     /**
+     * Add the HasDuplicates trait to the class when it is missing.
+     *
      * @param  class-string<Model>  $class
      */
     protected function ensureTrait(string $contents, string $class): string
@@ -250,6 +272,8 @@ class MakeDuplicateOptionsCommand extends Command
     }
 
     /**
+     * Add the Duplicatable contract to the class when it is missing.
+     *
      * @param  class-string<Model>  $class
      */
     protected function ensureInterface(string $contents, string $class): string
@@ -277,6 +301,9 @@ class MakeDuplicateOptionsCommand extends Command
         );
     }
 
+    /**
+     * Insert the generated method just before the closing brace of the class.
+     */
     protected function insertMethod(string $contents, string $code): string
     {
         $position = strrpos($contents, '}');

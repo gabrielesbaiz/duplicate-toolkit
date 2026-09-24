@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 
 final class MaxDepthExceededException extends DuplicateToolkitException
 {
+    /**
+     * Create a new exception for a run that ran out of depth.
+     */
     public static function for(Model $model, int $depth): self
     {
         return new self(sprintf(

@@ -7,6 +7,8 @@ namespace Gabrielesbaiz\DuplicateToolkit\Exceptions;
 final class RelationNotFoundException extends DuplicateToolkitException
 {
     /**
+     * Create a new exception for a relation the model does not define.
+     *
      * @param  class-string  $modelClass
      * @param  array<int, string>  $available
      */

@@ -14,13 +14,15 @@ use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Throwable;
 
-/**
- * Show every relation defined on a model and how it would be duplicated.
- */
 class InspectRelationsCommand extends Command
 {
     use ResolvesModels;
 
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
     protected $signature = 'duplicate-toolkit:relations
                             {model? : The model class, fully qualified or short (e.g. Product)}
                             {--depth=1 : How many levels of nested relations to display}
@@ -28,8 +30,16 @@ class InspectRelationsCommand extends Command
                             {--all : Include parent and through relations, which are never duplicated}
                             {--json : Output machine readable JSON}';
 
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
     protected $description = 'List the relations of a model and how each would be duplicated';
 
+    /**
+     * Execute the console command.
+     */
     public function handle(RelationInspector $inspector): int
     {
         $argument = $this->argument('model');
@@ -87,6 +97,8 @@ class InspectRelationsCommand extends Command
     }
 
     /**
+     * Build the table rows for a model and, recursively, its relations.
+     *
      * @param  array<int, class-string<Model>>  $seen
      * @return array<int, array<string, mixed>>
      */
@@ -135,6 +147,9 @@ class InspectRelationsCommand extends Command
         return $rows;
     }
 
+    /**
+     * Get the strategy a relation would use without any further input.
+     */
     protected function strategyFor(Model $model, RelationMeta $meta): RelationStrategy
     {
         return app(Duplicator::class)
@@ -143,8 +158,10 @@ class InspectRelationsCommand extends Command
     }
 
     /**
-     * Total rows in the related table. Cheap and enough to gauge the size of a
-     * duplication before running it.
+     * Count the rows in the related table.
+     *
+     * A whole-table count is cheap and enough to gauge the size of a
+     * duplication before anyone commits to running it.
      */
     protected function countFor(RelationMeta $meta): string
     {

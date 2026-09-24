@@ -24,14 +24,15 @@ use function Laravel\Prompts\select;
 
 use Throwable;
 
-/**
- * Duplicate a record interactively: pick the model, pick the record, tick the
- * relations to copy, preview the plan, then commit.
- */
 class DuplicateModelCommand extends Command
 {
     use ResolvesModels;
 
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
     protected $signature = 'duplicate-toolkit:duplicate
                             {model? : The model class, fully qualified or short (e.g. Product)}
                             {id? : Primary key of the record to duplicate}
@@ -48,8 +49,16 @@ class DuplicateModelCommand extends Command
                             {--dry-run : Show what would be created without keeping it}
                             {--queue : Dispatch the duplication to the queue instead}';
 
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
     protected $description = 'Duplicate an Eloquent record, choosing interactively which relations to include';
 
+    /**
+     * Execute the console command.
+     */
     public function handle(DuplicateManager $manager, RelationInspector $inspector): int
     {
         $argument = $this->argument('model');
@@ -94,14 +103,16 @@ class DuplicateModelCommand extends Command
     }
 
     /**
-     * Whether the command may prompt. Honours both the Symfony interactivity
-     * flag and an explicit --no-interaction.
+     * Determine if the command is allowed to prompt for input.
      */
     protected function shouldPrompt(): bool
     {
         return $this->input->isInteractive() && $this->option('no-interaction') !== true;
     }
 
+    /**
+     * Resolve the record that should be duplicated.
+     */
     protected function resolveRecord(string $class): ?Model
     {
         /** @var Model $instance */
@@ -157,6 +168,9 @@ class DuplicateModelCommand extends Command
         return $instance->newQuery()->find($key);
     }
 
+    /**
+     * Get the column best suited to naming a record in a prompt.
+     */
     protected function labelColumn(Model $model): ?string
     {
         foreach (['name', 'title', 'label', 'version', 'code', 'slug'] as $column) {
@@ -168,6 +182,9 @@ class DuplicateModelCommand extends Command
         return null;
     }
 
+    /**
+     * Build the duplication options from the command input.
+     */
     protected function buildOptions(Model $model, RelationInspector $inspector): DuplicateOptions
     {
         $options = DuplicateOptions::make();
@@ -188,6 +205,9 @@ class DuplicateModelCommand extends Command
         return $options;
     }
 
+    /**
+     * Apply the relation choices, prompting for them when none were given.
+     */
     protected function applyRelationOptions(Model $model, RelationInspector $inspector, DuplicateOptions $options): DuplicateOptions
     {
         $only = Cast::toStringList($this->option('only'));
@@ -267,6 +287,9 @@ class DuplicateModelCommand extends Command
         return $options;
     }
 
+    /**
+     * Get the strategy a relation would use without any further input.
+     */
     protected function currentStrategy(Model $model, RelationMeta $meta): RelationStrategy
     {
         return app(Duplicator::class)
@@ -274,6 +297,9 @@ class DuplicateModelCommand extends Command
             ->strategyFor($meta->name) ?? $meta->defaultStrategy();
     }
 
+    /**
+     * Apply the column options given on the command line.
+     */
     protected function applyColumnOptions(DuplicateOptions $options): DuplicateOptions
     {
         $excluded = Cast::toStringList($this->option('exclude-column'));
@@ -318,6 +344,8 @@ class DuplicateModelCommand extends Command
     }
 
     /**
+     * Split a "column=value" argument into its two halves.
+     *
      * @return array{0: string|null, 1: string}
      */
     protected function splitPair(string $pair): array
@@ -332,7 +360,7 @@ class DuplicateModelCommand extends Command
     }
 
     /**
-     * Run a dry run, show the plan, and ask whether to commit.
+     * Run a dry run, show the plan, and ask whether to commit it.
      */
     protected function preview(DuplicateManager $manager, Model $model, DuplicateOptions $options): bool
     {
@@ -361,6 +389,8 @@ class DuplicateModelCommand extends Command
     }
 
     /**
+     * Render the outcome of a duplication run.
+     *
      * @param  DuplicateResult<covariant Model>  $result
      */
     protected function renderResult(DuplicateResult $result, bool $committed): void

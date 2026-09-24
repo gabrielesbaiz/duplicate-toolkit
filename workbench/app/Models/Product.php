@@ -88,8 +88,10 @@ class Product extends Model
     }
 
     /**
-     * Not a relation: proves discovery ignores non-relation methods and never
-     * invokes them.
+     * Blow up when called.
+     *
+     * This is not a relation, and proves that discovery both ignores a
+     * non-relation method and never invokes one to find that out.
      */
     public function explode(): string
     {

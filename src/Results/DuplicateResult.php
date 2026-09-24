@@ -9,7 +9,7 @@ use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Everything a duplication run produced.
+ * Everything a single duplication run produced.
  *
  * @template TModel of Model
  *
@@ -18,6 +18,8 @@ use Illuminate\Database\Eloquent\Model;
 final readonly class DuplicateResult implements Arrayable
 {
     /**
+     * Create a new duplicate result instance.
+     *
      * @param  TModel  $model
      * @param  TModel  $source
      */
@@ -30,7 +32,7 @@ final readonly class DuplicateResult implements Arrayable
     ) {}
 
     /**
-     * Old primary key => new primary key, for the given model class.
+     * Get the old primary key to new primary key map for the given model class.
      *
      * Without an argument the whole map is returned, keyed by class name.
      *
@@ -43,7 +45,7 @@ final readonly class DuplicateResult implements Arrayable
     }
 
     /**
-     * The new primary key created for a given source record.
+     * Get the new primary key created for the given source record.
      */
     public function newKeyFor(Model $source): int|string|null
     {
@@ -51,7 +53,7 @@ final readonly class DuplicateResult implements Arrayable
     }
 
     /**
-     * Number of records created, in total or for one model class.
+     * Get the number of records created, in total or for one model class.
      *
      * @param  class-string<Model>|null  $class
      */
@@ -65,6 +67,8 @@ final readonly class DuplicateResult implements Arrayable
     }
 
     /**
+     * Get the number of records created, keyed by model class.
+     *
      * @return array<class-string<Model>, int>
      */
     public function counts(): array
@@ -73,6 +77,8 @@ final readonly class DuplicateResult implements Arrayable
     }
 
     /**
+     * Get the instance as an array.
+     *
      * @return array<string, mixed>
      */
     public function toArray(): array

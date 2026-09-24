@@ -20,7 +20,7 @@ it('discovers relations from return types', function (): void {
 });
 
 it('never invokes non relation methods', function (): void {
-    // Product::explode() throws if called.
+    // Product::explode() throws as soon as it is called.
     expect(fn (): array => $this->inspector->for(new Product))->not->toThrow(RuntimeException::class);
 });
 
@@ -46,7 +46,7 @@ it('resolves the related model class', function (): void {
 });
 
 // The 1.x RelationHelper kept a single static accumulator, so the relations of
-// the first inspected model leaked into every later one.
+// the first inspected model leaked into every model inspected after it.
 it('does not leak relations between model classes', function (): void {
     $product = array_keys($this->inspector->for(new Product));
     $version = array_keys($this->inspector->for(new Version));

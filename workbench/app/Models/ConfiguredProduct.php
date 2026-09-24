@@ -8,21 +8,26 @@ use Gabrielesbaiz\DuplicateToolkit\Contracts\Duplicatable;
 use Gabrielesbaiz\DuplicateToolkit\DuplicateOptions;
 
 /**
- * A Product that declares its own duplication options.
+ * A product that declares its own duplication options.
  */
 class ConfiguredProduct extends Product implements Duplicatable
 {
     protected $table = 'products';
 
     /**
-     * Share the parent's morph identity so fixtures created as a Product are
-     * still reachable from this subclass.
+     * Get the class name for polymorphic relations.
+     *
+     * The parent morph identity is shared so that a fixture created as a
+     * product is still reachable through this subclass.
      */
     public function getMorphClass(): string
     {
         return Product::class;
     }
 
+    /**
+     * Get the options describing how this model should be duplicated.
+     */
     public function duplicateOptions(): DuplicateOptions
     {
         return DuplicateOptions::make()

@@ -7,6 +7,8 @@ namespace Gabrielesbaiz\DuplicateToolkit\Exceptions;
 final class ModelResolutionException extends DuplicateToolkitException
 {
     /**
+     * Create a new exception for a model name that could not be resolved.
+     *
      * @param  array<int, string>  $namespaces
      */
     public static function make(string $name, array $namespaces): self

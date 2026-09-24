@@ -86,8 +86,8 @@ it('aborts when a duplicating listener returns false', function (): void {
 it('runs the before and after save callbacks', function (): void {
     $seen = [];
 
-    // A full closure, not an arrow fn: arrow functions capture by value, which
-    // would bind the nested callbacks to a copy of $seen.
+    // A full closure rather than an arrow function, because an arrow function
+    // captures by value and would bind the nested callbacks to a copy of $seen.
     $copy = makeProduct()->duplicate(function (DuplicateOptions $options) use (&$seen): DuplicateOptions {
         return $options
             ->beforeSave(function ($duplicate) use (&$seen): void {
@@ -113,7 +113,8 @@ it('can save without firing eloquent events', function (): void {
     try {
         makeProduct()->duplicate(fn (DuplicateOptions $o): DuplicateOptions => $o->quietly());
 
-        expect($saved)->toBe(1); // only the fixture, not the duplicate
+        // Only the fixture fired the event, never the duplicate.
+        expect($saved)->toBe(1);
     } finally {
         Product::flushEventListeners();
     }

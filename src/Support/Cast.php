@@ -7,13 +7,16 @@ namespace Gabrielesbaiz\DuplicateToolkit\Support;
 use Stringable;
 
 /**
- * Narrowing helpers for the many `mixed` values the framework hands us:
- * config values, console arguments and raw attribute values.
+ * Narrowing helpers for the many mixed values the framework hands us, such as
+ * configuration values, console arguments and raw attribute values.
  *
  * @internal
  */
 final class Cast
 {
+    /**
+     * Narrow the given value to a string, falling back to the default.
+     */
     public static function toString(mixed $value, string $default = ''): string
     {
         if (is_string($value)) {
@@ -35,6 +38,9 @@ final class Cast
         return $default;
     }
 
+    /**
+     * Narrow the given value to an integer, falling back to the default.
+     */
     public static function toInt(mixed $value, int $default = 0): int
     {
         if (is_int($value)) {
@@ -52,13 +58,16 @@ final class Cast
         return $default;
     }
 
+    /**
+     * Narrow the given value to a boolean, falling back to the default.
+     */
     public static function toBool(mixed $value, bool $default = false): bool
     {
         return is_bool($value) ? $value : (is_scalar($value) ? (bool) $value : $default);
     }
 
     /**
-     * Keep only the string entries of an arbitrary array.
+     * Get only the string entries of an arbitrary value.
      *
      * @return array<int, string>
      */

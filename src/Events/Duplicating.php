@@ -16,6 +16,9 @@ final readonly class Duplicating
 {
     use Dispatchable;
 
+    /**
+     * Create a new event instance.
+     */
     public function __construct(
         public Model $source,
         public DuplicateOptions $options,

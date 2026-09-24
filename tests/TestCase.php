@@ -18,11 +18,14 @@ abstract class TestCase extends Orchestra
     {
         parent::setUp();
 
-        // Relation discovery is memoised per class; start every test clean.
+        // Relation discovery is memoised per model class, so here we clear it
+        // to keep the discovery of one test out of the next.
         $this->app->make(RelationInspector::class)->flush();
     }
 
     /**
+     * Get the package providers.
+     *
      * @return array<int, class-string>
      */
     protected function getPackageProviders($app): array
@@ -32,6 +35,9 @@ abstract class TestCase extends Orchestra
         ];
     }
 
+    /**
+     * Define the environment setup.
+     */
     protected function defineEnvironment($app): void
     {
         tap($app->make(Repository::class), function (Repository $config): void {
@@ -45,6 +51,9 @@ abstract class TestCase extends Orchestra
         });
     }
 
+    /**
+     * Define the database migrations.
+     */
     protected function defineDatabaseMigrations(): void
     {
         $this->loadMigrationsFrom(__DIR__.'/../workbench/database/migrations');

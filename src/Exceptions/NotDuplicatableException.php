@@ -9,6 +9,9 @@ use Gabrielesbaiz\DuplicateToolkit\Contracts\Duplicatable;
 
 final class NotDuplicatableException extends DuplicateToolkitException
 {
+    /**
+     * Create a new exception for a model that is not duplicatable.
+     */
     public static function make(object $model): self
     {
         return new self(sprintf(
@@ -19,6 +22,9 @@ final class NotDuplicatableException extends DuplicateToolkitException
         ));
     }
 
+    /**
+     * Create a new exception for a model that has never been persisted.
+     */
     public static function unsavedModel(object $model): self
     {
         return new self(sprintf(
