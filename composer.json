@@ -1,9 +1,13 @@
 {
     "name": "gabrielesbaiz/duplicate-toolkit",
-    "description": "A lightweight helper package to handle Eloquent model duplication.",
+    "description": "A powerful, modern toolkit to duplicate Eloquent models and their relations.",
     "keywords": [
         "Gabriele Sbaiz",
         "laravel",
+        "eloquent",
+        "duplicate",
+        "clone",
+        "replicate",
         "duplicate-toolkit"
     ],
     "homepage": "https://github.com/gabrielesbaiz/duplicate-toolkit",
@@ -16,19 +20,29 @@
         }
     ],
     "require": {
-        "php": "^8.0",
-        "spatie/laravel-package-tools": "^1.16",
-        "illuminate/contracts": "^10.0||^11.0||^12.0",
-        "illuminate/support": "^10.0||^11.0||^12.0",
-        "illuminate/database": "^10.0||^11.0||^12.0"
+        "php": "^8.3",
+        "illuminate/console": "^12.0||^13.0",
+        "illuminate/contracts": "^12.0||^13.0",
+        "illuminate/database": "^12.0||^13.0",
+        "illuminate/support": "^12.0||^13.0",
+        "spatie/laravel-package-tools": "^1.16"
     },
     "require-dev": {
-        "laravel/pint": "^1.14",
-        "nunomaduro/collision": "^8.1.1||^7.10.0",
-        "orchestra/testbench": "^10.0.0||^9.0.0||^8.22.0",
-        "pestphp/pest": "^3.0",
-        "pestphp/pest-plugin-arch": "^3.0",
-        "pestphp/pest-plugin-laravel": "^3.0"
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.18",
+        "nunomaduro/collision": "^8.5",
+        "orchestra/testbench": "^10.0||^11.0",
+        "pestphp/pest": "^3.7||^4.0",
+        "pestphp/pest-plugin-arch": "^3.0||^4.0",
+        "pestphp/pest-plugin-laravel": "^3.0||^4.0",
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "rector/rector": "^2.0",
+        "spatie/laravel-medialibrary": "^11.0"
+    },
+    "suggest": {
+        "spatie/laravel-medialibrary": "Required to duplicate media collections alongside models (^11.0)."
     },
     "autoload": {
         "psr-4": {
@@ -38,7 +52,8 @@
     "autoload-dev": {
         "psr-4": {
             "Gabrielesbaiz\\DuplicateToolkit\\Tests\\": "tests/",
-            "Workbench\\App\\": "workbench/app/"
+            "Workbench\\App\\": "workbench/app/",
+            "Workbench\\Database\\Factories\\": "workbench/database/factories/"
         }
     },
     "scripts": {
@@ -47,13 +62,25 @@
         "analyse": "vendor/bin/phpstan analyse",
         "test": "vendor/bin/pest",
         "test-coverage": "vendor/bin/pest --coverage",
-        "format": "vendor/bin/pint"
+        "format": "vendor/bin/pint",
+        "rector": "vendor/bin/rector process",
+        "rector-dry": "vendor/bin/rector process --dry-run"
     },
     "config": {
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "phpstan/extension-installer": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Gabrielesbaiz\\DuplicateToolkit\\DuplicateToolkitServiceProvider"
+            ],
+            "aliases": {
+                "Duplicate": "Gabrielesbaiz\\DuplicateToolkit\\Facades\\Duplicate"
+            }
         }
     },
     "minimum-stability": "dev",
