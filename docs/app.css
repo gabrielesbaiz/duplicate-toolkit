@@ -1,0 +1,518 @@
+/* ══════════════════════════════════════════════════════════════
+   DuplicateToolkit — documentation site
+   "Schema Vivo": a navy drafting table. One stylesheet serves two
+   layouts — the full-width landing page at #/home and the three
+   column guide at #/intro … #/changelog — because they are one
+   identity, not two sites that happen to share a domain.
+   ══════════════════════════════════════════════════════════════ */
+
+*,*::before,*::after{box-sizing:border-box}
+
+/* ── TOKENS · dark is the default ─────────────────────── */
+/* Dark first because the plate and the terminal are drawn in it, and a
+   palette designed around the instruments is the one that holds together. */
+:root{
+  --bg:#071A27; --bg2:#0A2233; --ink:#D6EAF8; --dim:#8BADC5; --faint:#557C93;
+  --cy:#5BD0FF; --amb:#FFC46B; --gr:#63D6A2; --sk:#4A6B7F;
+  --line:rgba(126,178,214,.18); --line2:rgba(126,178,214,.30);
+  --solid:#0A2030; --soft:rgba(91,208,255,.07); --panel:rgba(6,20,30,.66);
+  --nav:rgba(7,26,39,.9); --veil:rgba(3,12,19,.72); --foot:rgba(6,20,30,.5);
+  --grid:rgba(126,178,214,.04); --glow:rgba(91,208,255,.55);
+  --wash:rgba(28,78,110,.55); --onaccent:#04141F; --onamber:#231703;
+  --heart:#FF7A8A; --shadow:rgba(0,0,0,.8);
+  --mx:clamp(16px,3.2vw,40px); --hx:clamp(18px,4.4vw,64px);
+}
+
+/* ── TOKENS · light, chosen not derived ───────────────── */
+/* The drafting table turns over; the instruments on it do not.
+   Every token is restated rather than tinted, so no colour is defined
+   only inside a theme block and both themes can be read on their own. */
+:root[data-theme="light"]{
+  --bg:#F2F6FA; --bg2:#E7EEF5; --ink:#0B2234; --dim:#465F73; --faint:#7A8FA1;
+  --cy:#0A7EA8; --amb:#9A6608; --gr:#0D7A52; --sk:#8397A6;
+  --line:rgba(11,34,52,.13); --line2:rgba(11,34,52,.22);
+  --solid:#FFFFFF; --soft:rgba(10,126,168,.07); --panel:rgba(255,255,255,.72);
+  --nav:rgba(242,246,250,.92); --veil:rgba(11,34,52,.38); --foot:rgba(255,255,255,.6);
+  --grid:rgba(11,34,52,.05); --glow:rgba(10,126,168,.4);
+  --wash:rgba(10,126,168,.12); --onaccent:#FFFFFF; --onamber:#231703;
+  --heart:#D33A50; --shadow:rgba(11,34,52,.22);
+}
+/* The system preference decides only while nobody has chosen. The script
+   stamps data-theme on first paint, so this is the pre-script fallback
+   rather than a second source of truth. */
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]):not([data-theme="light"]){
+    --bg:#F2F6FA; --bg2:#E7EEF5; --ink:#0B2234; --dim:#465F73; --faint:#7A8FA1;
+    --cy:#0A7EA8; --amb:#9A6608; --gr:#0D7A52; --sk:#8397A6;
+    --line:rgba(11,34,52,.13); --line2:rgba(11,34,52,.22);
+    --solid:#FFFFFF; --soft:rgba(10,126,168,.07); --panel:rgba(255,255,255,.72);
+    --nav:rgba(242,246,250,.92); --veil:rgba(11,34,52,.38); --foot:rgba(255,255,255,.6);
+    --grid:rgba(11,34,52,.05); --glow:rgba(10,126,168,.4);
+    --wash:rgba(10,126,168,.12); --onaccent:#FFFFFF; --onamber:#231703;
+    --heart:#D33A50; --shadow:rgba(11,34,52,.22);
+  }
+}
+
+/* Instruments: the terminal, the plate and every code block are read as
+   apparatus, not as page furniture, so they keep the dark palette in both
+   themes. Scoping the overrides locally means the rules inside them need
+   no theme awareness of their own. */
+pre,.kbox,.rig,.codeblock{
+  --ink:#D6EAF8; --dim:#8BADC5; --faint:#557C93;
+  --cy:#5BD0FF; --amb:#FFC46B; --gr:#63D6A2; --sk:#4A6B7F;
+  --line:rgba(126,178,214,.18); --line2:rgba(126,178,214,.30);
+  --solid:#0A2030; --soft:rgba(91,208,255,.07); --panel:rgba(6,20,30,.86);
+}
+
+html{scroll-behavior:smooth}
+/* An explicit background: the host paints its own ground behind the page,
+   and a transparent body borrows whatever theme that host is in. */
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Public Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased;
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:26px 26px,26px 26px}
+h1,h2,h3,h4{margin:0;font-family:"Archivo",sans-serif;letter-spacing:-.03em;text-wrap:balance}
+p{margin:0}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--amb);outline-offset:3px}
+code{font-family:"IBM Plex Mono",monospace;font-size:.9em;color:var(--cy)}
+/* The router hides whichever of the two layouts the hash is not pointing at. */
+.hidden{display:none!important}
+/* ── topbar ───────────────────────────────────────────── */
+.top{position:sticky;top:0;z-index:90;background:var(--nav);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line)}
+#progress{position:absolute;left:0;bottom:-1px;height:2px;width:0;background:var(--cy);
+  box-shadow:0 0 10px var(--glow);z-index:2}
+.top-in{max-width:1560px;margin:0 auto;padding:10px var(--mx);display:flex;align-items:center;gap:20px}
+.brand{display:flex;align-items:baseline;gap:9px;text-decoration:none;white-space:nowrap;
+  font:900 15px/1 "Archivo",sans-serif;color:var(--ink)}
+.brand b{font:500 10px/1 "IBM Plex Mono",monospace;color:var(--amb);letter-spacing:.14em;
+  border:1px solid rgba(255,196,107,.4);padding:3px 5px;border-radius:2px}
+.menu{display:flex;gap:18px;margin-left:14px}
+.menu a{font:500 13px/1 "Public Sans",sans-serif;color:var(--dim);text-decoration:none;transition:color .15s}
+.menu a:hover{color:var(--ink)}
+.menu a.here{color:var(--ink);font-weight:600}
+.menu a.heart{color:var(--heart);font-weight:600}
+.themebtn{background:transparent;border:1px solid var(--line2);color:var(--ink);padding:9px 13px;
+  border-radius:3px;cursor:pointer;font:700 12px/1 "Public Sans",sans-serif;
+  transition:border-color .15s,color .15s}
+.themebtn:hover{border-color:var(--cy);color:var(--cy)}
+.searchbtn{margin-left:auto;display:flex;align-items:center;gap:9px;background:transparent;
+  border:1px solid var(--line2);color:var(--faint);padding:8px 11px;border-radius:3px;cursor:pointer;
+  font:400 12.5px/1 "Public Sans",sans-serif;transition:border-color .15s,color .15s}
+.searchbtn:hover{border-color:var(--cy);color:var(--ink)}
+.searchbtn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.6}
+.searchbtn kbd{font:500 10px/1 "IBM Plex Mono",monospace;border:1px solid var(--line2);
+  border-radius:3px;padding:3px 5px;color:var(--faint)}
+@media (max-width:980px){.menu{display:none}}
+/* Below this the brand, the search control and the theme switch stop fitting
+   on one line. The search button keeps its icon — the affordance — and loses
+   the label and the shortcut hint, which are the parts a phone cannot use. */
+@media (max-width:620px){
+  .top-in{gap:12px}
+  .searchbtn span,.searchbtn kbd{display:none}
+  .themebtn{padding:9px 10px}
+}
+
+/* ── doc layout ───────────────────────────────────────── */
+.doc{max-width:1560px;margin:0 auto;padding:clamp(24px,3vw,40px) var(--mx) 60px;
+  display:grid;grid-template-columns:250px minmax(0,1fr) 200px;
+  gap:clamp(24px,3.2vw,52px);align-items:start}
+@media (max-width:1180px){.doc{grid-template-columns:230px minmax(0,1fr)} .onthis{display:none}}
+/* minmax(0,1fr) rather than 1fr: an auto minimum lets the rail's horizontal
+   strip size the column to its own content and drag the whole page sideways. */
+@media (max-width:900px){.doc{grid-template-columns:minmax(0,1fr)}}
+/* Sticky keeps the rail in flow, so its grid column survives — `fixed` would
+   destroy it. `align-self:start` matters too: a stretched grid item is as tall
+   as the page and has nothing left to stick within. */
+.rail{position:sticky;top:70px;align-self:start;padding-bottom:18px;scrollbar-width:thin}
+/* A pinned rail taller than the window overhangs the grid and prints over the
+   footer. Measured in JS, because no CSS length here can be trusted to match
+   the viewport this page is actually rendered into. */
+.rail.is-tall{position:static}
+.toc{display:grid;gap:1px;align-content:start}
+.toc b{font:600 9px/1 "IBM Plex Mono",monospace;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--faint);padding:0 0 8px 12px;margin-top:22px}
+.toc b:first-child{margin-top:0}
+.toc a{position:relative;display:block;color:var(--dim);text-decoration:none;font-size:13.5px;
+  line-height:1.35;padding:7px 12px;border-radius:3px;transition:color .14s,background .14s}
+.toc a:hover{color:var(--ink);background:var(--soft)}
+.toc a[aria-current="true"]{color:var(--cy);font-weight:600;background:rgba(91,208,255,.1)}
+.toc a[aria-current="true"]::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:2px;
+  background:var(--cy)}
+.toc a.out::after{content:"\2197";margin-left:5px;opacity:.5;font-size:11px}
+@media (max-width:900px){
+  .rail{position:static;max-height:none;overflow:visible;min-width:0}
+  /* The strip scrolls inside itself. Without the max-width it is simply as
+     wide as nineteen links and the body scrolls instead. */
+  .toc{grid-auto-flow:column;grid-auto-columns:max-content;overflow-x:auto;gap:4px;
+    max-width:100%;border-bottom:1px solid var(--line);padding-bottom:10px}
+  .toc b{display:none}
+  .toc a{white-space:nowrap;padding:6px 10px}
+  .toc a[aria-current="true"]::before{display:none}
+}
+
+/* ── pages ────────────────────────────────────────────── */
+main{min-height:60vh}
+main>section{display:none}
+main>section.on{display:block;animation:pagein .26s ease}
+@keyframes pagein{from{opacity:0;transform:translateY(6px)}}
+.kicker{font:500 10px/1 "IBM Plex Mono",monospace;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--amb);display:block;margin-bottom:14px}
+.page-title{font-weight:900;font-size:clamp(28px,3.6vw,42px)}
+main h2{font-weight:800;font-size:clamp(20px,2.4vw,26px);margin-top:58px;scroll-margin-top:84px;
+  position:relative}
+main h3{font-weight:700;font-size:16.5px;margin:32px 0 10px;scroll-margin-top:84px;position:relative}
+main p{font-size:15.5px;line-height:1.76;color:var(--dim);margin-top:14px;max-width:70ch}
+main .lead{font-size:clamp(16px,1.5vw,18.5px);line-height:1.7;color:var(--ink);margin-top:18px;max-width:66ch}
+main a:not(.pg){color:var(--cy)}
+.anchor{margin-left:10px;font-family:"IBM Plex Mono",monospace;font-weight:500;font-size:.6em;
+  color:var(--faint);text-decoration:none;opacity:0;transition:opacity .15s,color .15s;vertical-align:2px}
+h2:hover>.anchor,h3:hover>.anchor,.anchor:focus-visible{opacity:1}
+.anchor:hover{color:var(--cy)}
+.anchor.done{opacity:1;color:var(--gr)}
+.anchor.done::after{content:" copied";font-size:.8em;letter-spacing:.08em}
+@media (hover:none){.anchor{opacity:.4}}
+
+ul.plain,ol.steps{margin:16px 0 0;padding-left:20px;color:var(--dim);font-size:15px;line-height:1.85;
+  max-width:68ch}
+ul.plain li,ol.steps li{margin-bottom:6px}
+ul.plain code,ol.steps code{color:var(--cy)}
+
+.note{background:var(--soft);border-left:3px solid var(--cy);padding:15px 18px;margin-top:20px;
+  font-size:14.5px;line-height:1.72;color:var(--dim);max-width:68ch}
+.note b{color:var(--ink)}
+.note.warn{border-left-color:var(--amb);background:rgba(255,196,107,.06)}
+.note.good{border-left-color:var(--gr);background:rgba(99,214,162,.06)}
+
+.codewrap{position:relative;margin-top:20px}
+.codewrap>button{position:absolute;top:8px;right:8px;opacity:0;background:var(--bg);color:var(--faint);
+  border:1px solid var(--line2);border-radius:2px;padding:5px 8px;cursor:pointer;
+  font:600 9px/1 "IBM Plex Mono",monospace;letter-spacing:.12em;text-transform:uppercase;
+  transition:opacity .15s,color .15s,border-color .15s}
+.codewrap:hover>button,.codewrap>button:focus-visible{opacity:1}
+.codewrap>button:hover{color:var(--cy);border-color:var(--cy)}
+pre{margin:0;font:400 12.8px/1.78 "IBM Plex Mono",monospace;padding:18px 20px;overflow-x:auto;
+  white-space:pre;background:#08202F;border:1px solid var(--line2);color:#C3DFF2}
+pre i{color:var(--amb);font-style:normal}
+pre u{color:var(--cy);text-decoration:none}
+pre s{color:var(--faint);text-decoration:none}
+pre em{color:var(--gr);font-style:normal}
+pre b{color:#E8B9FF;font-weight:400}
+
+table{width:100%;border-collapse:collapse;margin-top:20px;font-size:14px;display:block;overflow-x:auto;
+  white-space:nowrap}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 9.5px/1 "IBM Plex Mono",monospace;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--faint);border-bottom-color:var(--line2)}
+td{color:var(--dim)}
+td:first-child{color:var(--ink)}
+td code{white-space:nowrap}
+
+.grid2{display:grid;gap:1px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  background:var(--line);border:1px solid var(--line2);margin-top:22px}
+.grid2>div{background:var(--solid);padding:20px}
+.grid2 .tag{font:500 9.5px/1 "IBM Plex Mono",monospace;letter-spacing:.16em;text-transform:uppercase;
+  border:1px solid;padding:4px 7px;display:inline-block;border-radius:2px}
+.grid2 h4{font-weight:800;font-size:16px;margin:14px 0 8px}
+.grid2 p{font-size:13.5px;margin-top:0;color:var(--dim)}
+
+/* ── changelog ────────────────────────────────────────── */
+.rel{border-left:1px solid var(--line);padding-left:26px;margin-top:34px;position:relative}
+.rel::before{content:"";position:absolute;left:-5px;top:7px;width:9px;height:9px;border-radius:50%;
+  background:var(--bg);border:2px solid var(--cy)}
+.rel.old::before{border-color:var(--sk)}
+.rel-h{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.rel-h h2{margin-top:0;font-size:clamp(22px,2.6vw,28px)}
+.rel-h time{font:500 11px/1 "IBM Plex Mono",monospace;letter-spacing:.14em;color:var(--faint)}
+.rel-h .pill{font:500 9.5px/1 "IBM Plex Mono",monospace;letter-spacing:.16em;text-transform:uppercase;
+  border:1px solid;padding:5px 8px;border-radius:2px}
+.rel h3{font-size:13px;font-weight:600;font-family:"IBM Plex Mono",monospace;letter-spacing:.14em;
+  text-transform:uppercase;margin:26px 0 10px}
+.rel h3.fix{color:var(--amb)} .rel h3.add{color:var(--gr)}
+.rel h3.chg{color:var(--cy)} .rel h3.rem{color:var(--sk)}
+
+/* ── on this page ─────────────────────────────────────── */
+.onthis{position:sticky;top:70px;align-self:start}
+.onthis>b{display:block;font:600 9px/1 "IBM Plex Mono",monospace;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--faint);margin-bottom:12px}
+#subs{display:grid;border-left:1px solid var(--line)}
+#subs a{position:relative;color:var(--dim);text-decoration:none;font-size:12.5px;line-height:1.4;
+  padding:6px 0 6px 13px;margin-left:-1px;border-left:2px solid transparent;
+  transition:color .14s,border-color .14s}
+#subs a.sub{padding-left:24px;font-size:12px;color:var(--faint)}
+#subs a:hover{color:var(--ink)}
+#subs a[aria-current="true"]{color:var(--cy);border-left-color:var(--cy)}
+.onthis.empty{display:none}
+
+/* ── pager ────────────────────────────────────────────── */
+.pager{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-top:56px}
+@media (max-width:620px){.pager{grid-template-columns:1fr}}
+.pg{display:grid;gap:6px;padding:16px 20px;border:1px solid var(--line2);background:var(--solid);
+  text-decoration:none;transition:border-color .15s,transform .15s}
+.pg:hover{border-color:var(--cy);transform:translateY(-2px)}
+.pg span{font:600 9px/1 "IBM Plex Mono",monospace;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--faint)}
+.pg b{font-size:15px;color:var(--ink);font-weight:600}
+.pg.next{text-align:right}
+.pg[hidden]{display:none}
+.pager.only-next .pg.next{grid-column:2}
+@media (max-width:620px){.pager.only-next .pg.next{grid-column:1}}
+
+/* ── search palette ───────────────────────────────────── */
+.kwrap{position:fixed;inset:0;z-index:200;display:none;background:var(--veil);
+  backdrop-filter:blur(4px);padding:12vh 20px 20px}
+.kwrap.on{display:block}
+.kbox{max-width:620px;margin:0 auto;background:#0A2030;border:1px solid var(--line2);
+  box-shadow:0 30px 80px -20px var(--shadow)}
+.kbox input{width:100%;background:transparent;border:0;border-bottom:1px solid var(--line);
+  color:var(--ink);font:400 15px/1 "Public Sans",sans-serif;padding:18px 20px;outline:0}
+.kbox input::placeholder{color:var(--faint)}
+.kres{max-height:46vh;overflow-y:auto}
+.kres a{display:flex;gap:12px;align-items:baseline;padding:12px 20px;text-decoration:none;
+  border-bottom:1px solid var(--line)}
+.kres a:last-child{border-bottom:0}
+.kres a.sel{background:rgba(91,208,255,.1)}
+.kres .t{font-size:14px;color:var(--ink)}
+.kres .c{margin-left:auto;font:400 10px/1 "IBM Plex Mono",monospace;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);white-space:nowrap}
+.kempty{padding:22px 20px;font-size:14px;color:var(--faint)}
+
+/* ── footer ───────────────────────────────────────────── */
+.sitefoot{border-top:1px solid var(--line2);background:var(--foot)}
+.fin{max-width:1560px;margin:0 auto;padding:44px var(--mx) 0;display:grid;gap:30px;
+  grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.fin h4{font:500 10px/1 "IBM Plex Mono",monospace;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 14px}
+.fin ul{list-style:none;margin:0;padding:0;display:grid;gap:10px;font-size:14.5px}
+.fin a{color:var(--dim);text-decoration:none}
+.fin a:hover{color:var(--cy)}
+.colo{max-width:1560px;margin:34px auto 0;padding:18px var(--mx) 46px;border-top:1px solid var(--line);
+  font:400 12.5px/1.6 "IBM Plex Mono",monospace;color:var(--faint);display:flex;
+  justify-content:space-between;gap:16px;flex-wrap:wrap}
+.colo b{color:var(--cy);font-weight:500}
+
+/* ══════════════════════════════════════════════════════════════
+   THE LANDING PAGE
+   Everything below belongs to #/home. Nothing above it depends on
+   any of it: the guide's rules are scoped to `main`, and the home
+   page's sections live outside it, so the two never argue about a
+   heading size. The few shared names — .note, .steps, .rel — are
+   scoped on one side or the other for the same reason.
+   ══════════════════════════════════════════════════════════════ */
+
+/* The wash is the front page's own weather. Painting it on #home rather
+   than on body means it does not follow you into the guide, where a
+   gradient behind a reading column is just noise. */
+#home{background-image:radial-gradient(120% 70% at 78% -8%,var(--wash),transparent 62%)}
+/* A selling column is wider than a reading one, so the landing page keeps
+   its own measure instead of inheriting the guide's --mx. */
+.wrap{max-width:1140px;margin:0 auto;padding:0 var(--hx)}
+.wrap.wide{max-width:1400px}
+.narrow{max-width:760px}
+.eyebrow{font:500 11px/1 "IBM Plex Mono",monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--amb)}
+.lede{font-size:clamp(15.5px,1.45vw,18px);line-height:1.68;color:var(--dim);max-width:64ch}
+/* ---------- hero ---------- */
+.hero{padding:clamp(40px,6vw,86px) 0 0}
+.hero h1{font-weight:900;font-size:clamp(34px,5.6vw,72px);line-height:1;margin:18px 0 0;max-width:17ch}
+.hero h1 em{font-style:normal;color:var(--cy)}
+.hero .lede{margin-top:22px}
+.acts{display:flex;gap:11px;margin-top:30px;flex-wrap:wrap;align-items:center}
+.btn{font:700 13px/1 "Public Sans",sans-serif;padding:15px 22px;text-decoration:none;border-radius:2px;
+  border:1px solid var(--cy);background:var(--cy);color:var(--onaccent);
+  transition:transform .15s,box-shadow .15s,background .15s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 26px var(--glow)}
+.btn.gh{background:transparent;color:var(--ink);border-color:var(--line2)}
+.btn.gh:hover{border-color:var(--cy);box-shadow:none}
+.cmd{font:400 12.5px/1 "IBM Plex Mono",monospace;background:var(--panel);border:1px solid var(--line);
+  color:var(--dim);padding:15px 17px;border-radius:2px;cursor:pointer;transition:border-color .15s,color .15s}
+.cmd:hover{border-color:var(--cy);color:var(--ink)}
+.cmd b{color:var(--gr);font-weight:400}
+
+/* ---------- the rig ---------- */
+/* The colour is restated, not inherited. The rig redefines --ink locally so it
+   stays an instrument in both themes, but `color` still cascades in from body
+   — which in the light theme painted dark text onto the dark panel. */
+.rig{display:grid;grid-template-columns:minmax(0,1.04fr) minmax(0,1fr);
+  margin-top:clamp(30px,4vw,48px);border:1px solid var(--line2);background:var(--panel);
+  color:var(--ink);backdrop-filter:blur(3px)}
+@media (max-width:1000px){.rig{grid-template-columns:1fr}}
+.pane{min-width:0;display:flex;flex-direction:column}
+.pane+.pane{border-left:1px solid var(--line2)}
+@media (max-width:1000px){.pane+.pane{border-left:0;border-top:1px solid var(--line2)}}
+.plabel{display:flex;gap:10px;align-items:center;padding:10px 15px;border-bottom:1px solid var(--line);
+  font:500 10px/1 "IBM Plex Mono",monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--amb)}
+.plabel i{width:6px;height:6px;border-radius:50%;background:var(--amb);display:block;
+  box-shadow:0 0 0 3px rgba(255,196,107,.15)}
+.plabel span{margin-left:auto;color:var(--faint);letter-spacing:.14em}
+.tout{padding:18px 20px;font:400 11.8px/1.76 "IBM Plex Mono",monospace;flex:1;
+  min-height:400px;overflow-x:auto;white-space:pre}
+@media (max-width:1000px){.tout{min-height:0}}
+.tout .p{color:var(--gr)}
+.tout .c{color:var(--ink)}
+.tout .d{color:var(--dim)}
+.tout .h{color:var(--faint)}
+.tout .cp{color:var(--cy)}
+.tout .rf{color:var(--amb)}
+.tout .sk{color:var(--sk)}
+.tout .ok{color:var(--gr)}
+.caret{display:inline-block;width:7px;height:14px;background:var(--cy);vertical-align:-3px;
+  animation:blink .95s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+.plate{padding:16px 16px 4px;flex:1}
+.plate svg{width:100%;height:auto;display:block}
+.plate text{font-family:"IBM Plex Mono",monospace}
+.nd{opacity:0;transition:opacity .36s ease}
+.nd.on{opacity:1}
+.ed{transition:stroke-dashoffset .5s cubic-bezier(.4,0,.2,1)}
+.dim{opacity:0;transition:opacity .55s ease .12s}
+.dim.on{opacity:1}
+.keys{display:flex;gap:24px;flex-wrap:wrap;padding:14px 16px 16px;
+  font:400 11px/1 "IBM Plex Mono",monospace;color:var(--dim)}
+.keys div{display:flex;align-items:center;gap:9px}
+.keys i{width:24px;height:0;border-top-width:2px;border-top-style:solid;display:block}
+.tblock{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line2)}
+.tblock div{padding:11px 14px;border-right:1px solid var(--line)}
+.tblock div:last-child{border-right:0}
+.tblock b{display:block;font:500 9px/1 "IBM Plex Mono",monospace;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--faint);margin-bottom:7px}
+.tblock span{font:500 13px/1 "IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.tblock span.a{color:var(--amb)}
+
+/* ---------- sections ---------- */
+.sec{padding:clamp(56px,8vw,112px) 0 0}
+.sec h2{font-weight:900;font-size:clamp(25px,3.5vw,42px);max-width:20ch}
+.sec h2 em{font-style:normal;color:var(--cy)}
+.sec .lede{margin-top:16px}
+.rule{height:1px;background:var(--line);margin-top:clamp(40px,6vw,80px)}
+.grid3{display:grid;gap:0;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+  border:1px solid var(--line2);margin-top:30px;background:var(--line)}
+.grid3>div{background:var(--solid);padding:26px 24px}
+.grid3 .tag{font:500 10px/1 "IBM Plex Mono",monospace;letter-spacing:.18em;text-transform:uppercase;
+  border:1px solid;padding:5px 8px;display:inline-block;border-radius:2px}
+.grid3 h3{font-weight:800;font-size:19px;margin:16px 0 9px;letter-spacing:-.02em}
+.grid3 p{font-size:14px;line-height:1.66;color:var(--dim)}
+.grid3 .rel{margin-top:14px;font:400 11px/1.7 "IBM Plex Mono",monospace;color:var(--faint)}
+
+.codeblock{font:400 12.8px/1.78 "IBM Plex Mono",monospace;padding:20px 22px;overflow-x:auto;
+  white-space:pre;background:#08202F;border:1px solid var(--line2);color:#C3DFF2;margin-top:24px}
+.codeblock i{color:var(--amb);font-style:normal}
+.codeblock u{color:var(--cy);text-decoration:none}
+.codeblock s{color:var(--faint);text-decoration:none}
+.codeblock em{color:var(--gr);font-style:normal}
+
+.two{display:grid;gap:clamp(24px,4vw,52px);grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin-top:30px}
+@media (max-width:860px){.two{grid-template-columns:minmax(0,1fr)}}
+.two h3{font-weight:800;font-size:17px;margin-bottom:9px}
+.two p{font-size:14.5px;line-height:1.66;color:var(--dim)}
+
+.before{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border:1px solid var(--line2);margin-top:28px;
+  background:var(--line)}
+@media (max-width:820px){.before{grid-template-columns:minmax(0,1fr)}}
+.before>div{background:var(--solid);padding:22px 22px 24px}
+.before pre{background:#08202F;border:1px solid var(--line2);padding:16px 18px}
+.before h3{font:500 10px/1 "IBM Plex Mono",monospace;letter-spacing:.2em;text-transform:uppercase;
+  margin-bottom:16px}
+.before .old h3{color:var(--sk)}
+.before .new h3{color:var(--cy)}
+.before pre{margin:0;font:400 12.5px/1.75 "IBM Plex Mono",monospace;white-space:pre;overflow-x:auto;
+  color:#B9D6EA}
+.before .old pre{color:var(--sk)}
+.before .bnote{margin-top:16px;font-size:13.5px;line-height:1.6;color:var(--dim)}
+.before .new .bnote b{color:var(--cy);font-weight:500}
+
+.spec{border:1px solid var(--line2);margin-top:28px;background:var(--panel)}
+.spec dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr)}
+.spec dt,.spec dd{padding:13px 18px;border-bottom:1px solid var(--line);margin:0;
+  font:400 12.8px/1.5 "IBM Plex Mono",monospace}
+.spec dt{color:var(--dim);border-right:1px solid var(--line);white-space:nowrap}
+.spec dd{color:var(--ink)}
+.spec dd b{color:var(--cy);font-weight:500}
+.spec dd s{color:var(--sk);text-decoration:none}
+.spec dl>:nth-last-child(-n+2){border-bottom:0}
+
+.cmds{display:grid;gap:1px;background:var(--line);border:1px solid var(--line2);margin-top:28px}
+.cmds>div{background:var(--solid);padding:18px 20px;display:grid;
+  grid-template-columns:minmax(0,350px) minmax(0,1fr);gap:20px;align-items:baseline}
+@media (max-width:820px){.cmds>div{grid-template-columns:minmax(0,1fr);gap:6px}}
+.cmds code{color:var(--cy);font-size:12.6px}
+.cmds p{font-size:14px;line-height:1.58;color:var(--dim)}
+
+.steps{counter-reset:s;margin-top:30px;border-top:1px solid var(--line)}
+/* minmax(0,…) throughout: a bare 1fr takes its minimum from its content, so
+   one long command line inside a <pre> widens the column past the viewport
+   instead of scrolling inside the block that already offers to scroll. */
+.steps>div{display:grid;grid-template-columns:auto minmax(0,1fr);gap:22px;padding:24px 0;
+  border-bottom:1px solid var(--line)}
+.steps .n{font:500 11px/1 "IBM Plex Mono",monospace;letter-spacing:.16em;color:var(--amb);padding-top:6px}
+.steps h3{font-weight:800;font-size:19px;margin-bottom:8px;letter-spacing:-.02em}
+.steps p{font-size:14.5px;line-height:1.66;color:var(--dim);max-width:60ch}
+.steps pre{margin:12px 0 0;font:400 12.5px/1.7 "IBM Plex Mono",monospace;color:var(--cy);
+  white-space:pre;overflow-x:auto}
+
+.callout{border:1px solid rgba(255,196,107,.34);background:rgba(255,196,107,.05);
+  padding:20px 22px;margin-top:28px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px}
+.callout .k{font:500 10px/1 "IBM Plex Mono",monospace;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--amb);padding-top:3px;white-space:nowrap}
+.callout p{font-size:14.5px;line-height:1.66;color:var(--dim)}
+.callout p+p{margin-top:9px}
+.callout a{color:var(--amb)}
+
+.req{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border:1px solid var(--line2);
+  margin-top:28px;background:var(--line)}
+.req>div{background:var(--solid);padding:20px}
+.req b{display:block;font:500 9.5px/1 "IBM Plex Mono",monospace;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--faint);margin-bottom:9px}
+.req span{font:500 16px/1.3 "IBM Plex Mono",monospace;color:var(--ink)}
+
+/* ---------- support ---------- */
+.sup{display:grid;grid-template-columns:1.25fr .75fr;gap:clamp(28px,4vw,56px);align-items:start;margin-top:30px}
+@media (max-width:900px){.sup{grid-template-columns:1fr}}
+.sup h2{max-width:none}
+.sup h2 em{font-style:normal;color:var(--amb)}
+.sup p+p{margin-top:16px}
+.sponsor{border:1px solid rgba(255,196,107,.34);background:
+  radial-gradient(120% 90% at 50% 0%,rgba(255,196,107,.12),transparent 70%),var(--solid);
+  padding:clamp(26px,3vw,36px)}
+.sponsor .amt{font:900 clamp(40px,5vw,58px)/1 "Archivo",sans-serif;color:var(--amb);
+  letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.sponsor .per{font:500 10px/1 "IBM Plex Mono",monospace;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--faint);margin-top:12px}
+.sponsor .go{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:24px;
+  padding:16px 20px;text-decoration:none;border:1px solid var(--amb);background:var(--amb);color:var(--onamber);
+  font:700 14px/1 "Public Sans",sans-serif;border-radius:2px;
+  transition:transform .15s,box-shadow .15s}
+.sponsor .go:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(255,196,107,.24)}
+.sponsor .fine{margin-top:14px;font-size:12.5px;line-height:1.55;color:var(--faint);text-align:center}
+.ways{display:grid;gap:1px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  background:var(--line);border:1px solid var(--line2);margin-top:clamp(28px,4vw,44px)}
+.ways>div{background:var(--solid);padding:24px 22px}
+.ways .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ways .ic{font-size:20px;line-height:1}
+.ways .free{font:500 9.5px/1 "IBM Plex Mono",monospace;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--gr);border:1px solid rgba(99,214,162,.36);padding:5px 7px;border-radius:2px}
+.ways h3{font-weight:800;font-size:17px;margin:18px 0 9px;letter-spacing:-.02em}
+.ways p{font-size:14px;line-height:1.64;color:var(--dim)}
+.why{margin-top:22px;border:1px solid var(--line2);border-left:3px solid var(--amb);
+  background:rgba(255,196,107,.045);padding:20px 22px;display:grid;
+  grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start}
+.why .ic{font-size:15px;line-height:1.5}
+.why p{font-size:14.5px;line-height:1.68;color:var(--dim)}
+.why b{color:var(--ink);font-weight:700}
+
+
+/* ── REVEAL ───────────────────────────────────────────── */
+/* Sections arrive as you reach them. The reduced-motion block below hands
+   them their finished state instead of removing them from the page. */
+.reveal{opacity:0;transform:translateY(16px);
+  transition:opacity .66s cubic-bezier(.2,.7,.3,1),transform .66s cubic-bezier(.2,.7,.3,1)}
+.reveal.in{opacity:1;transform:none}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .reveal{opacity:1;transform:none;transition:none}
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;
+    transition-duration:.001ms!important}
+}

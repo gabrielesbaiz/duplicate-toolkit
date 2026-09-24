@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>DuplicateToolkit</title>
+<meta name="description" content="Duplicate an Eloquent record and everything under it — deciding, per relation, whether to copy it, point at the original, or leave it alone. Three strategies, a dry run, four Artisan commands and a map of every key it wrote.">
+<link rel="canonical" href="https://gabrielesbaiz.github.io/duplicate-toolkit/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23071A27%22/><g fill=%22none%22 stroke=%22%235BD0FF%22 stroke-width=%228%22><rect x=%2216%22 y=%2216%22 width=%2244%22 height=%2244%22/><rect x=%2240%22 y=%2240%22 width=%2244%22 height=%2244%22/></g></svg>">
+<meta property="og:type" content="website">
+<meta property="og:title" content="DuplicateToolkit — read the drawing before you cut">
+<meta property="og:description" content="Deep duplication for Eloquent: copy, reference or skip each relation, override attributes before the insert, and get back an old key to new key map for every row created.">
+<meta property="og:url" content="https://gabrielesbaiz.github.io/duplicate-toolkit/">
+<meta property="og:image" content="https://gabrielesbaiz.github.io/duplicate-toolkit/duplicate-toolkit-logo.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="DuplicateToolkit — read the drawing before you cut">
+<meta name="twitter:description" content="Deep duplication for Eloquent: copy, reference or skip each relation, with a dry run that measures the plan instead of estimating it.">
+<meta name="twitter:image" content="https://gabrielesbaiz.github.io/duplicate-toolkit/duplicate-toolkit-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="#/home">DuplicateToolkit<b>2.0</b></a>
+    <nav class="menu">
+      <a href="#/home" data-nav="home">Home</a>
+      <a href="#/intro" data-nav="intro">Guide</a>
+      <a href="#/commands" data-nav="commands">Commands</a>
+      <a href="#/config" data-nav="config">Configuration</a>
+      <a href="#/upgrade" data-nav="upgrade">Upgrade</a>
+      <a href="#/changelog" data-nav="changelog">Changelog</a>
+      <a class="heart" href="https://github.com/sponsors/gabrielesbaiz">&#9829; Sponsor</a>
+    </nav>
+    <button class="searchbtn" id="openk" aria-label="Search the documentation" aria-keyshortcuts="Meta+K">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.4 10.4 14 14"/></svg>
+      <span>Search</span><kbd id="kbdhint">&#8984;K</kbd>
+    </button>
+    <button class="themebtn" id="theme" aria-label="Switch colour theme">Light</button>
+  </div>
+  <div id="progress"></div>
+</header>
+
+<div id="home">
+<section class="wrap hero">
+  <p class="eyebrow">Fig. 1 — App\Models\Product · depth 2</p>
+  <h1>Read the drawing <em>before</em> you cut.</h1>
+  <p class="lede">One Artisan command prints exactly what your model would do — every relation, its type, and the strategy that applies. No surprises at the far end of a transaction.</p>
+  <div class="acts">
+    <a class="btn" href="#/quick">Get started &nbsp;&rarr;</a>
+    <a class="btn gh" href="#/intro">Read the guide</a>
+    <button class="cmd" data-copy="composer require gabrielesbaiz/duplicate-toolkit"><b>$</b> composer require gabrielesbaiz/duplicate-toolkit</button>
+  </div>
+</section>
+
+<section class="wrap wide" id="h-plate">
+  <div class="rig">
+    <div class="pane">
+      <div class="plabel"><i></i>Terminal<span>live</span></div>
+      <div class="tout" id="out" aria-live="polite"></div>
+    </div>
+    <div class="pane">
+      <div class="plabel"><i></i>Plate<span>scale 1:1</span></div>
+      <div class="plate">
+        <svg viewBox="0 0 520 312" role="img" aria-label="Schematic of the Product model and the relations the command discovered: versions and its descriptions, setting and notes are copied; categories and tags are referenced; auditLogs is skipped.">
+          <!-- construction lines: drawn once, dim -->
+          <g fill="none" stroke="#5BD0FF" stroke-width="1.2" opacity=".34">
+            <path class="ed" id="c-trunk" d="M124 151 H176"/>
+            <path class="ed" id="c-spine" d="M176 31 V285"/>
+          </g>
+          <!-- inked branches: one short stub each, no shared segments -->
+          <g fill="none" stroke-width="1.6">
+            <path class="ed" id="e-versions"     stroke="#5BD0FF" d="M176 31 H222"/>
+            <path class="ed" id="e-descriptions" stroke="#5BD0FF" d="M240 48 V73 H252"/>
+            <path class="ed" id="e-setting"      stroke="#5BD0FF" d="M176 117 H222"/>
+            <path class="ed" id="e-notes"        stroke="#5BD0FF" d="M176 159 H222"/>
+            <path class="ed" id="e-categories"        stroke="#FFC46B" stroke-dasharray="6 4" d="M176 201 H222"/>
+            <path class="ed" id="e-tags"      stroke="#FFC46B" stroke-dasharray="6 4" d="M176 243 H222"/>
+            <path class="ed" id="e-auditLogs"    stroke="#4A6B7F" stroke-dasharray="2 5" d="M176 285 H222"/>
+          </g>
+
+          <g class="nd on" id="n-root">
+            <rect x="12" y="126" width="112" height="50" fill="#0D2A3C" stroke="#5BD0FF" stroke-width="1.6"/>
+            <text x="24" y="148" fill="#D6EAF8" font-size="13" font-weight="600">Product</text>
+            <text x="24" y="165" fill="#7EA3BC" font-size="9.5">products · root</text>
+          </g>
+          <g class="nd" id="n-versions">
+            <rect x="222" y="14" width="140" height="34" fill="#0D2A3C" stroke="#5BD0FF" stroke-width="1.2"/>
+            <text x="232" y="30" fill="#D6EAF8" font-size="11.5">versions</text>
+            <text x="232" y="42" fill="#7EA3BC" font-size="9">HasMany · 12</text>
+          </g>
+          <g class="nd" id="n-descriptions">
+            <rect x="252" y="56" width="140" height="34" fill="#0D2A3C" stroke="#5BD0FF" stroke-width="1.2"/>
+            <text x="262" y="72" fill="#D6EAF8" font-size="11.5">descriptions</text>
+            <text x="262" y="84" fill="#7EA3BC" font-size="9">HasMany · 148</text>
+          </g>
+          <g class="nd" id="n-setting">
+            <rect x="222" y="100" width="140" height="34" fill="#0D2A3C" stroke="#5BD0FF" stroke-width="1.2"/>
+            <text x="232" y="116" fill="#D6EAF8" font-size="11.5">setting</text>
+            <text x="232" y="128" fill="#7EA3BC" font-size="9">HasOne · 1</text>
+          </g>
+          <g class="nd" id="n-notes">
+            <rect x="222" y="142" width="140" height="34" fill="#0D2A3C" stroke="#5BD0FF" stroke-width="1.2"/>
+            <text x="232" y="158" fill="#D6EAF8" font-size="11.5">notes</text>
+            <text x="232" y="170" fill="#7EA3BC" font-size="9">MorphMany · 3</text>
+          </g>
+          <g class="nd" id="n-categories">
+            <rect x="222" y="184" width="140" height="34" fill="#2B2513" stroke="#FFC46B" stroke-width="1.2"/>
+            <text x="232" y="200" fill="#FFE3B6" font-size="11.5">categories</text>
+            <text x="232" y="212" fill="#BB9C6C" font-size="9">BelongsToMany · 4</text>
+          </g>
+          <g class="nd" id="n-tags">
+            <rect x="222" y="226" width="140" height="34" fill="#2B2513" stroke="#FFC46B" stroke-width="1.2"/>
+            <text x="232" y="242" fill="#FFE3B6" font-size="11.5">tags</text>
+            <text x="232" y="254" fill="#BB9C6C" font-size="9">BelongsToMany · 22</text>
+          </g>
+          <g class="nd" id="n-auditLogs">
+            <rect x="222" y="268" width="140" height="34" fill="#12242F" stroke="#4A6B7F" stroke-width="1.2"/>
+            <text x="232" y="284" fill="#7EA3BC" font-size="11.5">auditLogs</text>
+            <text x="232" y="296" fill="#557C93" font-size="9">HasMany · not copied</text>
+          </g>
+
+          <g class="dim" id="d-copy" stroke="#FFC46B" fill="none" stroke-width="1">
+            <path d="M406 14 H418 M412 14 V176 M406 176 H418 M412 95 H421"/>
+            <text x="425" y="92" fill="#FFC46B" font-size="9.5" stroke="none">161 rows</text>
+            <text x="425" y="105" fill="#BB9C6C" font-size="9" stroke="none">412 ms</text>
+          </g>
+          <g class="dim" id="d-ref" stroke="#FFC46B" fill="none" stroke-width="1">
+            <path d="M406 184 H418 M412 184 V260 M406 260 H418 M412 222 H421"/>
+            <text x="425" y="219" fill="#FFC46B" font-size="9.5" stroke="none">0 rows</text>
+            <text x="425" y="232" fill="#BB9C6C" font-size="9" stroke="none">re-attached</text>
+          </g>
+        </svg>
+      </div>
+      <div class="keys">
+        <div><i style="border-color:#5BD0FF"></i> copy</div>
+        <div><i style="border-color:#FFC46B;border-top-style:dashed"></i> reference</div>
+        <div><i style="border-color:#4A6B7F;border-top-style:dotted"></i> skip</div>
+      </div>
+      <div class="tblock">
+        <div><b>Drawing</b><span>Fig. 1</span></div>
+        <div><b>Depth</b><span id="f-depth">—</span></div>
+        <div><b>Rows</b><span id="f-rows">—</span></div>
+        <div><b>State</b><span class="a" id="f-state">idle</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap sec reveal">
+  <h2>The strategy column is <em>your</em> code</h2>
+  <p class="lede">Nothing on that plate is a framework default. The command resolves your model's own options and prints the answer — which is the whole point of reading it before you cut.</p>
+  <pre class="codeblock">class <i>Product</i> extends <i>Model</i> implements <i>Duplicatable</i>
+{
+    use <i>HasDuplicates</i>;
+
+    public function duplicateOptions(): <i>DuplicateOptions</i>
+    {
+        return <i>DuplicateOptions</i>::make()
+            -&gt;referenceRelations(<u>'categories'</u>, <u>'tags'</u>)
+            -&gt;excludeRelations(<u>'auditLogs'</u>)
+            -&gt;excludeColumnsMatching(<u>'/_count$/'</u>)
+            -&gt;uniqueColumns(<u>'name'</u>)
+            -&gt;quietly();
+    }
+}</pre>
+</section>
+
+<section class="wrap sec" id="h-strategies">
+  <div class="reveal">
+    <h2>Every relation gets <em>one of three</em> answers</h2>
+    <p class="lede">The defaults follow the relation type, so the ordinary case needs no configuration. Override from the model, from the call site, or with dot notation four levels down.</p>
+  </div>
+  <div class="grid3 reveal">
+    <div>
+      <span class="tag" style="color:#5BD0FF;border-color:rgba(91,208,255,.4)">copy</span>
+      <h3>It belongs to the record</h3>
+      <p>The related rows are replicated and attached to the duplicate, recursively, to the depth you allow.</p>
+      <p class="rel">hasOne · hasMany<br>morphOne · morphMany</p>
+    </div>
+    <div>
+      <span class="tag" style="color:#FFC46B;border-color:rgba(255,196,107,.4)">reference</span>
+      <h3>It is shared with the record</h3>
+      <p>The duplicate is attached to rows that already exist. Pivot payload declared with <code>withPivot()</code> comes along; the keys and pivot timestamps do not.</p>
+      <p class="rel">belongsToMany<br>morphToMany</p>
+    </div>
+    <div>
+      <span class="tag" style="color:#7EA3BC;border-color:rgba(126,163,188,.36)">skip</span>
+      <h3>It should not follow at all</h3>
+      <p>Never written, never even queried. Parents are always skipped — duplicating one would create a row the copy does not own.</p>
+      <p class="rel">belongsTo · morphTo<br>hasOneThrough · hasManyThrough</p>
+    </div>
+  </div>
+  <div class="reveal">
+    <pre class="codeblock"><i>DuplicateOptions</i>::make()
+    -&gt;copyRelations(<u>'versions'</u>, <u>'bundles'</u>)
+    -&gt;referenceRelations(<u>'categories'</u>, <u>'tags'</u>)
+    -&gt;excludeRelations(<u>'auditLogs'</u>)
+    -&gt;relation(<u>'versions.descriptions'</u>, fn ($o) =&gt; $o-&gt;excludeColumns(<u>'cached_html'</u>));
+
+<s>// or invert it — everything not listed is skipped</s>
+<i>DuplicateOptions</i>::make()-&gt;onlyRelations(<u>'versions'</u>);</pre>
+  </div>
+</section>
+
+<section class="wrap sec">
+  <div class="reveal">
+    <h2>One write, not two</h2>
+    <p class="lede">Renaming a copy after the fact costs a second write — and fires the events you just suppressed. Attribute overrides are applied to the model <em>before</em> it is inserted.</p>
+  </div>
+  <div class="before reveal">
+    <div class="old">
+      <h3>Before · two writes</h3>
+      <pre>$copy = $product-&gt;saveAsDuplicate();
+
+$copy-&gt;update([
+    'name' =&gt; $copy-&gt;name.' - COPY',
+]);</pre>
+      <p class="bnote">The <code>update()</code> fires <code>saving</code>, <code>saved</code> and <code>updated</code> — the observers and search indexing that <code>saveQuietly()</code> was meant to avoid.</p>
+    </div>
+    <div class="new">
+      <h3>After · one write</h3>
+      <pre>$copy = $product-&gt;duplicate(fn ($o) =&gt; $o
+    -&gt;suffix('name', ' - COPY')
+    -&gt;quietly());</pre>
+      <p class="bnote"><b>suffix, prefix, replace, withAttributes, mutate</b> — all applied to the model before <code>save()</code>, in the order you registered them.</p>
+    </div>
+  </div>
+  <div class="reveal">
+    <pre class="codeblock"><i>DuplicateOptions</i>::make()
+    -&gt;suffix(<u>'name'</u>, <u>' - COPY'</u>)
+    -&gt;replace(<u>'version'</u>, search: <u>'2025'</u>, replace: <u>'2026'</u>)
+    -&gt;withAttributes([<u>'is_active'</u> =&gt; <em>false</em>, <u>'product_id'</u> =&gt; $target-&gt;id])
+    -&gt;mutate(<u>'code'</u>, fn ($value, $duplicate, $source) =&gt; $value.<u>'-'</u>.$source-&gt;getKey())
+    -&gt;uniqueColumns(<u>'name'</u>)              <s>// "Widget" → "Widget (1)", in one query</s>
+    -&gt;excludeColumnsMatching(<u>'/_count$/'</u>);  <s>// counters are wrong the moment they are copied</s></pre>
+  </div>
+</section>
+
+<section class="wrap sec" id="h-result">
+  <div class="reveal">
+    <h2>It hands back <em>every key</em> it wrote</h2>
+    <p class="lede">The reason this package exists. If you have ever duplicated a tree and then rebuilt an old-id to new-id lookup by matching names, this replaces it — and unlike name matching, it does not silently mis-map the moment two records share a name.</p>
+  </div>
+  <div class="reveal">
+    <pre class="codeblock">$result = $product-&gt;duplicateWithResult();
+
+$result-&gt;model;                   <s>// the new root model</s>
+$result-&gt;idMap(<i>Version</i>::class);   <s>// [12 =&gt; 480, 13 =&gt; 481, 27 =&gt; 482]</s>
+$result-&gt;newKeyFor($version);     <s>// 480</s>
+$result-&gt;count();                 <s>// 161</s>
+$result-&gt;count(<i>Version</i>::class);   <s>// 12</s>
+$result-&gt;counts();                <s>// ['Version' =&gt; 12, 'Description' =&gt; 148, ...]</s>
+$result-&gt;durationMs;              <s>// 412.4</s>
+
+<s>// rewire the grandchildren, without guessing</s>
+foreach ($descriptions as $description) {
+    $description-&gt;update([
+        <u>'version_id'</u> =&gt; $result-&gt;idMap(<i>Version</i>::class)[$description-&gt;version_id],
+    ]);
+}</pre>
+  </div>
+  <div class="two reveal">
+    <div>
+      <h3>Rehearse it first</h3>
+      <p><code>preview()</code> performs every write inside a transaction and rolls it back. The counts are measured, not estimated — then decide whether to run it inline or hand it to the queue.</p>
+    </div>
+    <div>
+      <h3>Or send it away</h3>
+      <p><code>dispatch()</code> queues a batchable job, tagged for Horizon and guarded so the same record is never duplicated twice at once.</p>
+    </div>
+  </div>
+  <div class="reveal">
+    <pre class="codeblock">$plan = <i>Duplicate</i>::of($product)-&gt;preview();
+
+<em>if</em> ($plan-&gt;count() &gt; 5_000) {
+    <i>Duplicate</i>::of($product)-&gt;onQueue(<u>'duplicates'</u>)-&gt;dispatch();
+} <em>else</em> {
+    <i>Duplicate</i>::of($product)-&gt;execute();
+}</pre>
+  </div>
+</section>
+
+<section class="wrap sec">
+  <div class="reveal">
+    <h2>Depth, and the tree that eats itself</h2>
+    <p class="lede">A model already visited during a run is never visited again, so a self-referencing tree terminates instead of recursing forever.</p>
+  </div>
+  <div class="steps reveal">
+    <div>
+      <span class="n">01</span>
+      <div>
+        <h3>Set how far it follows</h3>
+        <p>The default comes from <code>duplicate-toolkit.max_depth</code>, which ships as 1. Zero duplicates the root and nothing else.</p>
+        <pre>-&gt;depth(2)          -&gt;shallow()</pre>
+      </div>
+    </div>
+    <div>
+      <span class="n">02</span>
+      <div>
+        <h3>Find out when it was not enough</h3>
+        <p>By default a tree deeper than the limit is quietly truncated. Strict mode throws <code>MaxDepthExceededException</code> instead, so a silently shallow copy cannot reach production.</p>
+        <pre>-&gt;depth(2)-&gt;strictDepth()</pre>
+      </div>
+    </div>
+    <div>
+      <span class="n">03</span>
+      <div>
+        <h3>Steer a grandchild from the root</h3>
+        <p>Dot notation reaches down without touching the child's model. Its own options still apply — yours are merged on top.</p>
+        <pre>-&gt;relation('versions.descriptions', fn ($o) =&gt; $o-&gt;excludeColumns('cached_html'))</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap sec" id="h-commands">
+  <div class="reveal">
+    <h2>Four commands, no guessing</h2>
+    <p class="lede">The plate above is the first of them. The other three pick, generate and migrate.</p>
+  </div>
+  <div class="cmds reveal">
+    <div><code>duplicate-toolkit:relations {model?}</code><p>The drawing. <code>--depth=N</code> to walk further, <code>--with-counts</code> for row counts, <code>--all</code> to include parents, <code>--json</code> for scripts.</p></div>
+    <div><code>duplicate-toolkit:duplicate {model?} {id?}</code><p>Search for a record, tick the relations — pre-ticked from your model's own options — review the plan, confirm. Or drive the whole thing from flags.</p></div>
+    <div><code>duplicate-toolkit:make-options {model?}</code><p>Runs the same picker and writes a typed <code>duplicateOptions()</code> into the model, adding the trait, the interface and the imports if they are missing.</p></div>
+    <div><code>duplicate-toolkit:upgrade {path}</code><p>Rewrites 1.x usages to the 2.0 API, and reports the two cases that need a human decision rather than guessing at them.</p></div>
+  </div>
+  <div class="reveal">
+    <pre class="codeblock"><em>php artisan</em> duplicate-toolkit:duplicate Product 41 \
+    --only=versions,bundles \
+    --reference=categories \
+    --suffix=<u>'name= - COPY'</u> \
+    --depth=2 \
+    --dry-run</pre>
+  </div>
+</section>
+
+<section class="wrap sec">
+  <div class="reveal">
+    <h2>Specification</h2>
+  </div>
+  <div class="spec reveal">
+    <dl>
+      <dt>discovery</dt><dd>return-type reflection · <b>nothing is invoked</b>, no source file is read</dd>
+      <dt>cache</dt><dd>memoised per class-string · relations cannot leak between model classes</dd>
+      <dt>depth</dt><dd>configurable · cycles detected and stopped · <b>strictDepth()</b> throws instead of truncating</dd>
+      <dt>writes</dt><dd>one transaction · chunked with <b>lazyById()</b> · events fire after commit</dd>
+      <dt>uniqueness</dt><dd>resolved in <b>one query</b>, never colliding with the source row</dd>
+      <dt>result</dt><dd>old key &rarr; new key for every row created, per model class</dd>
+      <dt>extras</dt><dd>soft deletes · UUID and ULID keys · provenance column · media library</dd>
+      <dt>analysis</dt><dd>PHPStan level max · <b>no baseline</b>, no ignores <s>· Pint · Rector</s></dd>
+      <dt>tested</dt><dd>PHP 8.3 and 8.4 &times; Laravel 12 and 13 <s>· prefer-lowest and prefer-stable</s></dd>
+    </dl>
+  </div>
+</section>
+
+<section class="wrap sec" id="h-install">
+  <div class="reveal">
+    <h2>Install it</h2>
+    <p class="lede">The service provider is auto-discovered. No migrations, no tables, no assets — publishing the config is optional, and the defaults duplicate correctly untouched.</p>
+    <pre class="codeblock"><em>composer require</em> gabrielesbaiz/duplicate-toolkit
+
+<em>php artisan</em> vendor:publish --tag=duplicate-toolkit-config
+<em>php artisan</em> duplicate-toolkit:relations <u>"App\Models\Product"</u></pre>
+    <div class="req">
+      <div><b>PHP</b><span>8.3+</span></div>
+      <div><b>Laravel</b><span>12 · 13</span></div>
+      <div><b>License</b><span>MIT</span></div>
+      <div><b>Provider</b><span>auto-discovered</span></div>
+    </div>
+    <div class="callout">
+      <span class="k">Upgrading</span>
+      <div>
+        <p>Coming from 1.x? It leaked relations between model classes, discovered relations by reading your source files and calling every public method, and crashed on <code>morphToMany</code>. Treat a 1.x duplication of two different models in one request as suspect.</p>
+        <p><code>duplicate-toolkit:upgrade</code> rewrites the mechanical changes. <a href="#/upgrade">Read the upgrade guide &rarr;</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap sec" id="h-support">
+  <div class="sup reveal">
+    <div>
+      <p class="eyebrow">— Support this package</p>
+      <h2 style="margin-top:16px">Free forever.<br>Not free to <em>maintain.</em></h2>
+      <p class="lede" style="margin-top:22px">Duplicating a relation tree correctly is the kind of thing nobody notices until the day it writes four thousand rows under the wrong parent. That day never shows up in a budget — so the packages that prevent it tend to be written on goodwill and maintained on whatever is left over.</p>
+      <p class="lede">Sponsorship is what keeps this one current with the frameworks it sits on, and keeps the test suite proving that every fix still holds. It stays MIT either way.</p>
+    </div>
+    <div class="sponsor">
+      <div class="amt">$5</div>
+      <div class="per">per month · cancel anytime</div>
+      <a class="go" href="https://github.com/sponsors/gabrielesbaiz">&#9825; Become a sponsor</a>
+      <p class="fine">Company tiers get your logo in the README and on this page.</p>
+    </div>
+  </div>
+
+  <div class="ways reveal">
+    <div>
+      <div class="top"><span class="ic">&#11088;</span><span class="free">Free</span></div>
+      <h3>Star the repo</h3>
+      <p>Thirty seconds, and it is the first signal other developers look at when deciding whether to trust a package.</p>
+    </div>
+    <div>
+      <div class="top"><span class="ic">&#128027;</span><span class="free">Free</span></div>
+      <h3>Open a good issue</h3>
+      <p>A clear reproduction is worth more than you think. Several of the fixes in 2.0 started as somebody else's bug report.</p>
+    </div>
+    <div>
+      <div class="top"><span class="ic">&#10084;&#65039;</span></div>
+      <h3>Sponsor from $5</h3>
+      <p>Goes towards the maintenance nobody sees: framework upgrades, holding PHPStan at level max, and keeping the test matrix green.</p>
+    </div>
+    <div>
+      <div class="top"><span class="ic">&#127970;</span></div>
+      <h3>Company tier</h3>
+      <p>Your logo here and in the README. If this package duplicates your production data, it is cheaper than the incident it prevents.</p>
+    </div>
+  </div>
+
+  <div class="why reveal">
+    <span class="ic">&#9825;</span>
+    <p><b>Why ask at all?</b> This package is MIT and always will be. Nothing is paywalled, nothing phones home, and no feature is held back for sponsors. Sponsorship buys maintenance time, not features — and if you cannot sponsor, the star and the bug report genuinely help.</p>
+  </div>
+</section>
+
+</div>
+
+<div class="doc hidden">
+  <aside class="rail">
+    <nav class="toc" aria-label="Guide contents">
+      <b>Getting started</b>
+      <a href="#/intro">Introduction</a>
+      <a href="#/install">Installation</a>
+      <a href="#/quick">Quick start</a>
+
+      <b>Duplicating</b>
+      <a href="#/strategies">Relation strategies</a>
+      <a href="#/nested">Nested relations</a>
+      <a href="#/attributes">Attribute overrides</a>
+      <a href="#/unique">Unique columns</a>
+      <a href="#/depth">Depth and cycles</a>
+
+      <b>Reference</b>
+      <a href="#/options">All options</a>
+      <a href="#/result">The result object</a>
+      <a href="#/commands">Artisan commands</a>
+      <a href="#/config">Configuration</a>
+      <a href="#/events">Events and queue</a>
+      <a href="#/discovery">Relation discovery</a>
+
+      <b>More</b>
+      <a href="#/recipes">Recipes</a>
+      <a href="#/trouble">Troubleshooting</a>
+      <a href="#/upgrade">Upgrading from 1.x</a>
+      <a href="#/project">Project &amp; licence</a>
+      <a href="#/changelog">Changelog</a>
+    </nav>
+  </aside>
+
+  <main id="main">
+<section id="intro" data-title="Introduction">
+  <span class="kicker">Getting started</span>
+  <h1 class="page-title">Introduction</h1>
+  <p class="lead">DuplicateToolkit copies an Eloquent record and everything under it, letting you decide per relation whether to duplicate the related rows, point at the originals, or leave them alone — and it hands back a map of every key it wrote.</p>
+
+  <h2>What problem it solves</h2>
+  <p>Eloquent ships <code>replicate()</code>. It copies one row's attributes and returns an unsaved model. If that is all you need, use it — one method call, no dependency.</p>
+  <p>The difficulty starts one level down. A product has twelve versions; those versions have a hundred and forty-eight descriptions; the product is also attached to four categories through a pivot table. Duplicating the product means duplicating the versions and the descriptions, but <em>not</em> the categories — the copy should share them. Get that distinction wrong and you either orphan rows or silently clone a reference table.</p>
+  <p>Then, having created a hundred and sixty-one rows, you need to know which new row corresponds to which old one, because something downstream has to be rewired.</p>
+
+  <h2>What you get</h2>
+  <ul class="plain">
+    <li><b>Deep duplication</b> of <code>hasOne</code>, <code>hasMany</code>, <code>morphOne</code>, <code>morphMany</code>, <code>belongsToMany</code> and <code>morphToMany</code>, to any depth, with cycle detection.</li>
+    <li><b>Three strategies per relation</b> — copy, reference, skip — set on the model, at the call site, or with dot notation several levels down.</li>
+    <li><b>Attribute overrides applied before the insert</b>, so renaming a copy costs one write rather than two.</li>
+    <li><b>An old key to new key map</b> for every record created.</li>
+    <li><b>Four Artisan commands</b>, including one that draws your model's relation tree and one that migrates 1.x code.</li>
+    <li><b>A dry run</b> that performs every write and rolls back, so the plan is measured rather than estimated.</li>
+  </ul>
+
+  <h2>What it is not</h2>
+  <p>It is not a soft-delete or versioning system, it does not track changes over time, and it does not decide whether a duplicate is authorised — that is your application's job. It duplicates whatever model you hand it.</p>
+
+  <div class="note warn"><b>Coming from 1.x?</b> The 1.x line leaked relations between model classes, discovered relations by reading your source files, and crashed on <code>morphToMany</code>. Read <a href="#/upgrade">Upgrading from 1.x</a> before you start.</div>
+
+  <h2>Requirements</h2>
+  <table>
+    <thead><tr><th>Requirement</th><th>Version</th></tr></thead>
+    <tbody>
+      <tr><td>PHP</td><td>8.3 or 8.4</td></tr>
+      <tr><td>Laravel</td><td>12.x or 13.x</td></tr>
+      <tr><td>Runtime dependencies</td><td>None beyond Illuminate and <code>spatie/laravel-package-tools</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="install" data-title="Installation">
+  <span class="kicker">Getting started</span>
+  <h1 class="page-title">Installation</h1>
+  <p class="lead">One composer command. The service provider is auto-discovered, there are no migrations and no assets, and the defaults duplicate correctly untouched.</p>
+
+  <h2>Install the package</h2>
+  <div class="codewrap"><pre><em>composer require</em> gabrielesbaiz/duplicate-toolkit</pre></div>
+
+  <h2>Publish the config</h2>
+  <p>Optional. Do it when you want to change the default depth, the globally excluded columns, or the queue connection.</p>
+  <div class="codewrap"><pre><em>php artisan</em> vendor:publish --tag=duplicate-toolkit-config</pre></div>
+  <p>That writes <code>config/duplicate-toolkit.php</code>. Every key is documented on the <a href="#/config">Configuration</a> page.</p>
+
+  <h2>Check it sees your models</h2>
+  <p>Before writing any code, ask the package what it found. This command reads nothing but return types and prints the relation tree it would follow.</p>
+  <div class="codewrap"><pre><em>php artisan</em> duplicate-toolkit:relations <u>"App\Models\Product"</u> --depth=2</pre></div>
+  <div class="note"><b>Nothing listed?</b> Relation discovery reads method return types. A relation method without one is invisible. See <a href="#/discovery">Relation discovery</a>.</div>
+
+  <h2>Add the trait</h2>
+  <div class="codewrap"><pre><em>use</em> <i>Gabrielesbaiz\DuplicateToolkit\Concerns\HasDuplicates</i>;
+<em>use</em> <i>Illuminate\Database\Eloquent\Model</i>;
+
+<em>class</em> <i>Product</i> <em>extends</em> <i>Model</i>
+{
+    <em>use</em> <i>HasDuplicates</i>;
+}</pre></div>
+  <p>That is the whole setup. <code>$product-&gt;duplicate()</code> now works, following the type defaults described in <a href="#/strategies">Relation strategies</a>.</p>
+</section>
+
+<section id="quick" data-title="Quick start">
+  <span class="kicker">Getting started</span>
+  <h1 class="page-title">Quick start</h1>
+  <p class="lead">From a bare model to a configured one, in the order you will actually do it.</p>
+
+  <h2>1 · Duplicate something</h2>
+  <div class="codewrap"><pre>$copy = $product-&gt;duplicate();</pre></div>
+  <p>Child relations are copied, pivoted relations are referenced, parent relations are left alone. Timestamps and soft-delete columns are never carried over.</p>
+
+  <h2>2 · Adjust it for one call</h2>
+  <p>Pass a callback to refine the options for this call only. Nothing on the model changes.</p>
+  <div class="codewrap"><pre><em>use</em> <i>Gabrielesbaiz\DuplicateToolkit\DuplicateOptions</i>;
+
+$copy = $product-&gt;duplicate(<em>fn</em> (<i>DuplicateOptions</i> $o) =&gt; $o
+    -&gt;suffix(<u>'name'</u>, <u>' - COPY'</u>)
+    -&gt;excludeRelations(<u>'auditLogs'</u>));</pre></div>
+
+  <h2>3 · Move the settled rules onto the model</h2>
+  <p>Once the same options keep appearing at call sites, they belong on the model. Implement <code>Duplicatable</code> and return them.</p>
+  <div class="codewrap"><pre><em>use</em> <i>Gabrielesbaiz\DuplicateToolkit\Concerns\HasDuplicates</i>;
+<em>use</em> <i>Gabrielesbaiz\DuplicateToolkit\Contracts\Duplicatable</i>;
+<em>use</em> <i>Gabrielesbaiz\DuplicateToolkit\DuplicateOptions</i>;
+
+<em>class</em> <i>Product</i> <em>extends</em> <i>Model</i> <em>implements</em> <i>Duplicatable</i>
+{
+    <em>use</em> <i>HasDuplicates</i>;
+
+    <em>public function</em> duplicateOptions(): <i>DuplicateOptions</i>
+    {
+        <em>return</em> <i>DuplicateOptions</i>::make()
+            -&gt;excludeColumnsMatching(<u>'/_count$/'</u>)
+            -&gt;uniqueColumns(<u>'name'</u>)
+            -&gt;referenceRelations(<u>'categories'</u>, <u>'tags'</u>)
+            -&gt;excludeRelations(<u>'auditLogs'</u>)
+            -&gt;quietly();
+    }
+}</pre></div>
+  <div class="note good"><b>Shortcut.</b> <code>php artisan duplicate-toolkit:make-options "App\Models\Product"</code> runs a relation picker and writes that method for you, imports included.</div>
+
+  <h2>4 · Take the result, not just the model</h2>
+  <div class="codewrap"><pre>$result = $product-&gt;duplicateWithResult();
+
+$result-&gt;model;                   <s>// the new Product</s>
+$result-&gt;idMap(<i>Version</i>::class);   <s>// [12 =&gt; 480, 13 =&gt; 481]</s>
+$result-&gt;count();                 <s>// 161</s></pre></div>
+
+  <h2>5 · Check the cost before committing</h2>
+  <div class="codewrap"><pre>$plan = <i>Duplicate</i>::of($product)-&gt;preview();   <s>// writes, then rolls back</s>
+
+$plan-&gt;count();    <s>// 161</s>
+$plan-&gt;counts();   <s>// ['Version' =&gt; 12, 'Description' =&gt; 148, ...]</s></pre></div>
+</section>
+
+<section id="strategies" data-title="Relation strategies">
+  <span class="kicker">Duplicating</span>
+  <h1 class="page-title">Relation strategies</h1>
+  <p class="lead">Every relation gets exactly one of three answers. The defaults follow the relation type, so the ordinary case needs no configuration at all.</p>
+
+  <div class="grid2">
+    <div>
+      <span class="tag" style="color:#5BD0FF;border-color:rgba(91,208,255,.4)">copy</span>
+      <h4>It belongs to the record</h4>
+      <p>The related rows are replicated and attached to the duplicate, recursively.</p>
+    </div>
+    <div>
+      <span class="tag" style="color:#FFC46B;border-color:rgba(255,196,107,.4)">reference</span>
+      <h4>It is shared with the record</h4>
+      <p>The duplicate is attached to rows that already exist. Nothing new is written.</p>
+    </div>
+    <div>
+      <span class="tag" style="color:#8BADC5;border-color:rgba(139,173,197,.36)">skip</span>
+      <h4>It should not follow</h4>
+      <p>Never written, never even queried.</p>
+    </div>
+  </div>
+
+  <h2>Defaults by relation type</h2>
+  <table>
+    <thead><tr><th>Relation</th><th>Default</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><code>hasOne</code> <code>hasMany</code></td><td>copy</td><td>The rows carry a foreign key pointing at this record. They belong to it.</td></tr>
+      <tr><td><code>morphOne</code> <code>morphMany</code></td><td>copy</td><td>Same, through a morph key.</td></tr>
+      <tr><td><code>belongsToMany</code></td><td>reference</td><td>The rows exist independently. A duplicated product should share the category table, not clone it.</td></tr>
+      <tr><td><code>morphToMany</code></td><td>reference</td><td>Same, through a morph pivot.</td></tr>
+      <tr><td><code>belongsTo</code> <code>morphTo</code></td><td>skip</td><td>Always. Duplicating a parent would create a row the copy does not own.</td></tr>
+      <tr><td><code>hasOneThrough</code> <code>hasManyThrough</code></td><td>skip</td><td>Always. The intermediate rows are not the copy's to write.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Overriding them</h2>
+  <div class="codewrap"><pre><i>DuplicateOptions</i>::make()
+    -&gt;copyRelations(<u>'versions'</u>, <u>'bundles'</u>)
+    -&gt;referenceRelations(<u>'categories'</u>, <u>'tags'</u>)
+    -&gt;excludeRelations(<u>'auditLogs'</u>);</pre></div>
+
+  <h3>Only these, and nothing else</h3>
+  <p><code>onlyRelations()</code> inverts the default: anything not listed is skipped.</p>
+  <div class="codewrap"><pre><i>DuplicateOptions</i>::make()-&gt;onlyRelations(<u>'versions'</u>);</pre></div>
+
+  <h3>With an attribute on the class</h3>
+  <div class="codewrap"><pre><em>use</em> <i>Gabrielesbaiz\DuplicateToolkit\Attributes\DuplicateRelations</i>;
+
+#[<i>DuplicateRelations</i>(
+    copy: [<u>'versions'</u>],
+    reference: [<u>'tags'</u>],
+    skip: [<u>'auditLogs'</u>],
+)]
+<em>class</em> <i>Product</i> <em>extends</em> <i>Model</i> { <em>use</em> <i>HasDuplicates</i>; }</pre></div>
+  <p>Precedence, highest first: options passed at the call site, then <code>duplicateOptions()</code> on the model, then the attribute, then the type default.</p>
+
+  <h2>Pivot payload</h2>
+  <p>Columns declared with <code>withPivot()</code> are carried over in <b>both</b> copy and reference mode. The pivot's own primary key, the two foreign keys, the morph type and the pivot timestamps are not — the relation manages those itself.</p>
+
+  <h2>Custom handlers</h2>
+  <p>When a relation needs logic the options cannot express, take it over entirely.</p>
+  <div class="codewrap"><pre><i>DuplicateOptions</i>::make()-&gt;relationUsing(<u>'bundles'</u>, <em>function</em> (
+    <i>Model</i> $source,
+    <i>Model</i> $duplicate,
+    <i>RelationMeta</i> $relation,
+    <i>DuplicateContext</i> $context,
+) {
+    <s>// $context-&gt;idMap(Version::class) is already populated here</s>
+});</pre></div>
+  <div class="note"><b>A handler replaces the strategy.</b> No strategy is applied to that relation, and no <code>RelationDuplicating</code> or <code>RelationDuplicated</code> event fires for it. Classes implementing <code>DuplicatesRelation</code> are accepted as well as closures.</div>
+</section>
+
+<section id="nested" data-title="Nested relations">
+  <span class="kicker">Duplicating</span>
+  <h1 class="page-title">Nested relations</h1>
+  <p class="lead">Dot notation reaches a grandchild from the root, without editing the child's model.</p>
+
+  <h2>Reaching down</h2>
+  <div class="codewrap"><pre><i>DuplicateOptions</i>::make()
+    -&gt;relation(<u>'versions.descriptions'</u>, <em>fn</em> ($o) =&gt; $o-&gt;excludeColumns(<u>'cached_html'</u>))
+    -&gt;relation(<u>'versions.attachments'</u>, <i>RelationStrategy</i>::Skip);</pre></div>
+
+  <h2>How options merge</h2>
+  <p>A related model's own <code>duplicateOptions()</code> is not discarded. The nested options you declare are merged <em>on top</em> of it, so a child keeps its own rules unless you explicitly override them.</p>
+  <ol class="steps">
+    <li>The child model's <code>duplicateOptions()</code> is resolved first.</li>
+    <li>Anything you declared for that relation path is merged over it.</li>
+    <li>Where both set the same thing, yours wins. Where only one sets it, that one applies.</li>
+  </ol>
+  <div class="note"><b>Lists accumulate, switches replace.</b> Excluded columns from both sides are combined; <code>quietly()</code>, <code>depth()</code> and the unique strategy are single values, and the incoming one wins.</div>
+
+  <h2>Per-relation column rules</h2>
+  <p>Two shorthands exist for the common case of excluding or uniquing columns on a child.</p>
+  <div class="codewrap"><pre><i>DuplicateOptions</i>::make()
+    -&gt;excludeRelationColumns([
+        <u>'versions'</u> =&gt; [<u>'cached_html'</u>, <u>'rendered_at'</u>],
+        <u>'notes'</u>    =&gt; [<u>'pinned'</u>],
+    ])
+    -&gt;uniqueRelationColumns([
+        <u>'versions'</u> =&gt; [<u>'name'</u>],
+    ]);</pre></div>
+  <p>Both are equivalent to a <code>relation()</code> call with a callback, and are kept because they read better when you are only adjusting columns.</p>
+
+  <h2>Depth still applies</h2>
+  <p>Declaring <code>'a.b.c'</code> does not raise the depth limit. If <code>max_depth</code> is 2, the third level is never reached regardless of what you configured for it. See <a href="#/depth">Depth and cycles</a>.</p>
+</section>
+
+<section id="attributes" data-title="Attribute overrides">
+  <span class="kicker">Duplicating</span>
+  <h1 class="page-title">Attribute overrides</h1>
+  <p class="lead">Every override is applied to the model before it is inserted. That is one write rather than two, and it does not fire the events you just suppressed.</p>
+
+  <h2>Why it matters</h2>
+  <p>The obvious way to rename a copy is to duplicate it and then update it:</p>
+  <div class="codewrap"><pre><s>// two writes — and the update fires saving, saved and updated,</s>
+<s>// which is exactly what quietly() was meant to avoid</s>
+$copy = $product-&gt;duplicate(<em>fn</em> ($o) =&gt; $o-&gt;quietly());
+$copy-&gt;update([<u>'name'</u> =&gt; $copy-&gt;name.<u>' - COPY'</u>]);</pre></div>
+  <p>The override form does the same thing in one insert, with the events still suppressed:</p>
+  <div class="codewrap"><pre>$copy = $product-&gt;duplicate(<em>fn</em> ($o) =&gt; $o
+    -&gt;suffix(<u>'name'</u>, <u>' - COPY'</u>)
+    -&gt;quietly());</pre></div>
+
+  <h2>The five forms</h2>
+  <table>
+    <thead><tr><th>Method</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td><code>suffix($col, $s)</code></td><td>Appends a string.</td></tr>
+      <tr><td><code>prefix($col, $s)</code></td><td>Prepends a string.</td></tr>
+      <tr><td><code>replace($col, $search, $replace)</code></td><td>Search and replace within the value.</td></tr>
+      <tr><td><code>withAttributes([...])</code></td><td>Forces values. A value may be a closure.</td></tr>
+      <tr><td><code>mutate($col, $fn)</code></td><td>Transforms the current value.</td></tr>
+    </tbody>
+  </table>
+  <div class="codewrap"><pre><i>DuplicateOptions</i>::make()
+    -&gt;suffix(<u>'name'</u>, <u>' - COPY'</u>)
+    -&gt;prefix(<u>'slug'</u>, <u>'copy-'</u>)
+    -&gt;replace(<u>'version'</u>, search: <u>'2025'</u>, replace: <u>'2026'</u>)
+    -&gt;withAttributes([<u>'is_active'</u> =&gt; <em>false</em>, <u>'published_at'</u> =&gt; <em>null</em>])
+    -&gt;mutate(<u>'code'</u>, <em>fn</em> ($value, $duplicate, $source) =&gt; $value.<u>'-'</u>.$source-&gt;getKey());</pre></div>
+  <p>Overrides run in the order you registered them, so a <code>suffix()</code> after a <code>withAttributes()</code> appends to the forced value.</p>
+
+  <h2>Excluding columns</h2>
+  <p>An excluded column is left at its database default rather than copied.</p>
+  <div class="codewrap"><pre><i>DuplicateOptions</i>::make()
+    -&gt;excludeColumns(<u>'sku'</u>, <u>'external_ref'</u>)
+    -&gt;excludeColumnsMatching(<u>'/_count$/'</u>, <u>'/^cached_/'</u>);</pre></div>
+  <div class="note good"><b>Never list these.</b> <code>created_at</code>, <code>updated_at</code> and <code>deleted_at</code> are always excluded. <code>/_count$/</code> is a shipped default, because a copied counter is wrong the instant it is written.</div>
+
+  <h2>Callbacks around the save</h2>
+  <div class="codewrap"><pre><i>DuplicateOptions</i>::make()
+    -&gt;beforeSave(<em>fn</em> (<i>Model</i> $duplicate, <i>Model</i> $source) =&gt; ...)
+    -&gt;afterSave(<em>fn</em> (<i>Model</i> $duplicate, <i>Model</i> $source) =&gt; ...);</pre></div>
+  <div class="note warn"><b>They run for every model in the tree</b>, not only the root. Check <code>$duplicate::class</code> if you only mean to touch one.</div>
+</section>
+
+<section id="unique" data-title="Unique columns">
+  <span class="kicker">Duplicating</span>
+  <h1 class="page-title">Unique columns</h1>
+  <p class="lead">Declare a column unique and the duplicate gets a value that does not collide — resolved in a single query.</p>
+
+  <div class="codewrap"><pre><i>DuplicateOptions</i>::make()-&gt;uniqueColumns(<u>'name'</u>);
+
+<s>// "Widget" → "Widget (1)" → "Widget (2)"</s></pre></div>
+
+  <h2>Strategies</h2>
+  <table>
+    <thead><tr><th>Strategy</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td><code>NumericSuffix</code> <span style="color:#63D6A2">default</span></td><td><code>Widget (1)</code></td></tr>
+      <tr><td><code>Uuid</code></td><td><code>Widget (3f2a91c7)</code></td></tr>
+      <tr><td><code>Ulid</code></td><td><code>Widget (7ZK4M2QX)</code></td></tr>
+      <tr><td><code>Timestamp</code></td><td><code>Widget (1769812345)</code></td></tr>
+    </tbody>
+  </table>
+  <div class="codewrap"><pre><em>use</em> <i>Gabrielesbaiz\DuplicateToolkit\Enums\UniqueStrategy</i>;
+
+<i>DuplicateOptions</i>::make()
+    -&gt;uniqueColumns(<u>'name'</u>)
+    -&gt;uniqueUsing(<i>UniqueStrategy</i>::Uuid);</pre></div>
+
+  <h2>The format</h2>
+  <p>The numeric strategy uses <code>duplicate-toolkit.unique_format</code>, which defaults to <code>' (%d)'</code>. Change it globally, or per model through the config.</p>
+
+  <div class="note"><b>One query, not one per attempt.</b> The 1.x implementation looped, querying for <code>"Widget (1)"</code>, then <code>"Widget (2)"</code>, and so on — and it queried through an unsaved replica without excluding the source row, which could loop forever. 2.0 fetches the matching values once and picks the lowest free suffix in memory.</div>
+
+  <div class="note warn"><b>Not a database constraint.</b> This resolves a value at duplication time. Under concurrent duplications of the same record, two writers can still pick the same suffix. Keep the unique index on the column.</div>
+</section>
+
+<section id="depth" data-title="Depth and cycles">
+  <span class="kicker">Duplicating</span>
+  <h1 class="page-title">Depth and cycles</h1>
+  <p class="lead">How far the duplication follows, and what stops a self-referencing tree from running forever.</p>
+
+  <h2>Setting the depth</h2>
+  <div class="codewrap"><pre><i>DuplicateOptions</i>::make()-&gt;depth(2);    <s>// two levels of relations</s>
+<i>DuplicateOptions</i>::make()-&gt;shallow();   <s>// the root model only, same as depth(0)</s></pre></div>
+  <p>The default comes from <code>duplicate-toolkit.max_depth</code>, which ships as 1 — one level of relations, which is what 1.x did and what most applications mean by "duplicate this record". Depth counts levels of relations, not models: the root is level 0, its children level 1, their children level 2. Going deeper is opt-in on purpose: on a real schema the second level often reaches transactional tables that reference the record without belonging to it.</p>
+
+  <h2>Cycles</h2>
+  <p>A model already visited during a run is never visited again. A category whose children are categories terminates on its own; so does a pair of models that reference each other.</p>
+  <div class="codewrap"><pre><em>class</em> <i>Category</i> <em>extends</em> <i>Model</i>
+{
+    <em>use</em> <i>HasDuplicates</i>;
+
+    <em>public function</em> children(): <i>HasMany</i>
+    {
+        <em>return</em> $this-&gt;hasMany(<i>self</i>::class, <u>'parent_id'</u>);
+    }
+}
+
+$root-&gt;duplicate();   <s>// terminates; each node is visited once</s></pre></div>
+
+  <h2>When the tree is deeper than the limit</h2>
+  <p>By default the extra levels are quietly dropped. That is usually what you want, and occasionally a silent bug — a copy that looks complete and is not.</p>
+  <div class="codewrap"><pre><i>DuplicateOptions</i>::make()-&gt;depth(2)-&gt;strictDepth();
+
+<s>// throws MaxDepthExceededException if anything was left uncopied</s></pre></div>
+  <div class="note"><b>Strict mode costs a query per copyable relation at the boundary</b>, because it has to ask whether anything was actually left behind. It is opt-in for that reason. Turning it on in your test suite and off in production is a reasonable split.</div>
+
+  <h2>Seeing the shape first</h2>
+  <div class="codewrap"><pre><em>php artisan</em> duplicate-toolkit:relations <u>"App\Models\Product"</u> --depth=3 --with-counts</pre></div>
+  <p>Or measure it exactly, without writing anything:</p>
+  <div class="codewrap"><pre>$plan = <i>Duplicate</i>::of($product)-&gt;preview();
+$plan-&gt;counts();   <s>// ['Version' =&gt; 12, 'Description' =&gt; 148, ...]</s></pre></div>
+</section>
+
+<section id="options" data-title="All options">
+  <span class="kicker">Reference</span>
+  <h1 class="page-title">All options</h1>
+  <p class="lead"><code>DuplicateOptions</code> is immutable and fully typed. Every method returns a new instance, so a model-level object can be derived from on each call without leaking state between duplications.</p>
+
+  <div class="note warn"><b>Use the return value.</b> <code>$options-&gt;excludeColumns('name');</code> on its own does nothing. Assign it or chain it.</div>
+
+  <h2>Columns</h2>
+  <table>
+    <thead><tr><th>Method</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td><code>excludeColumns(...$cols)</code></td><td>Left at the database default rather than copied.</td></tr>
+      <tr><td><code>excludeColumnsMatching(...$patterns)</code></td><td>Same, by regular expression.</td></tr>
+      <tr><td><code>uniqueColumns(...$cols)</code></td><td>Resolved to a non-colliding value.</td></tr>
+      <tr><td><code>uniqueUsing(UniqueStrategy)</code></td><td>Which scheme makes them unique.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Attributes</h2>
+  <table>
+    <thead><tr><th>Method</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td><code>withAttributes(array)</code></td><td>Forces values. Closures allowed.</td></tr>
+      <tr><td><code>suffix($col, $s)</code> <code>prefix($col, $s)</code></td><td>Append or prepend.</td></tr>
+      <tr><td><code>replace($col, $search, $replace)</code></td><td>Search and replace.</td></tr>
+      <tr><td><code>mutate($col, Closure)</code></td><td>Transform the current value.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Relations</h2>
+  <table>
+    <thead><tr><th>Method</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td><code>relation($name, $strategyOrCallback)</code></td><td>Set a strategy, or refine nested options. Accepts dot notation.</td></tr>
+      <tr><td><code>copyRelations(...)</code></td><td>Force copy.</td></tr>
+      <tr><td><code>referenceRelations(...)</code></td><td>Attach the originals.</td></tr>
+      <tr><td><code>excludeRelations(...)</code></td><td>Skip.</td></tr>
+      <tr><td><code>onlyRelations(...)</code></td><td>Copy these; skip everything else.</td></tr>
+      <tr><td><code>excludeRelationColumns(array)</code></td><td>Per-relation excluded columns.</td></tr>
+      <tr><td><code>uniqueRelationColumns(array)</code></td><td>Per-relation unique columns.</td></tr>
+      <tr><td><code>relationUsing($name, $handler)</code></td><td>Take the relation over entirely.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Behaviour</h2>
+  <table>
+    <thead><tr><th>Method</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td><code>depth(int)</code> <code>shallow()</code></td><td>How many levels to follow.</td></tr>
+      <tr><td><code>strictDepth()</code></td><td>Throw rather than truncate a deeper tree.</td></tr>
+      <tr><td><code>quietly()</code></td><td>Save without firing Eloquent model events.</td></tr>
+      <tr><td><code>withTrashed()</code></td><td>Copy soft-deleted children too.</td></tr>
+      <tr><td><code>withMedia(bool)</code></td><td>Copy medialibrary collections.</td></tr>
+      <tr><td><code>trackProvenance(?string)</code></td><td>Write the source key to a column, if it exists.</td></tr>
+      <tr><td><code>dryRun()</code></td><td>Write everything, then roll back.</td></tr>
+      <tr><td><code>beforeSave(Closure)</code> <code>afterSave(Closure)</code></td><td>Hooks around each save in the tree.</td></tr>
+      <tr><td><code>merge(DuplicateOptions)</code></td><td>Combine two sets; the incoming one wins.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Reading them back</h2>
+  <p>There is no <code>__get()</code>. Every value has a typed getter — <code>getExcludedColumns()</code>, <code>getUniqueColumns()</code>, <code>getMutators()</code>, <code>strategyFor($relation)</code>, <code>forRelation($relation)</code>, <code>getDepth()</code>, <code>shouldSaveQuietly()</code> and so on — which is what lets the package hold PHPStan at level max with no baseline.</p>
+
+  <h2>Entry points</h2>
+  <div class="codewrap"><pre><s>// on the model</s>
+$product-&gt;duplicate($options);              <s>// returns the new model</s>
+$product-&gt;duplicateWithResult($options);    <s>// returns a DuplicateResult</s>
+$product-&gt;duplicator();                     <s>// returns a PendingDuplicate</s>
+
+<s>// through the facade — useful when your class already has duplicate()</s>
+<i>Duplicate</i>::of($product)-&gt;suffix(<u>'name'</u>, <u>' - COPY'</u>)-&gt;execute();
+<i>Duplicate</i>::of($product)-&gt;preview();
+<i>Duplicate</i>::of($product)-&gt;onQueue(<u>'duplicates'</u>)-&gt;dispatch();
+<i>Duplicate</i>::run($product, $options);</pre></div>
+</section>
+
+<section id="result" data-title="The result object">
+  <span class="kicker">Reference</span>
+  <h1 class="page-title">The result object</h1>
+  <p class="lead">Every duplication can hand back a record of what it did — most importantly, which new key corresponds to which old one.</p>
+
+  <div class="codewrap"><pre>$result = $product-&gt;duplicateWithResult();</pre></div>
+
+  <h2>What it carries</h2>
+  <table>
+    <thead><tr><th>Property or method</th><th>Returns</th></tr></thead>
+    <tbody>
+      <tr><td><code>model</code></td><td>The new root model.</td></tr>
+      <tr><td><code>source</code></td><td>What it was copied from.</td></tr>
+      <tr><td><code>idMap(?string $class)</code></td><td>Old key to new key, for one class or all of them.</td></tr>
+      <tr><td><code>newKeyFor(Model $source)</code></td><td>The new key for a single source record.</td></tr>
+      <tr><td><code>count(?string $class)</code></td><td>Records created, in total or per class.</td></tr>
+      <tr><td><code>counts()</code></td><td>The whole tally, keyed by class name.</td></tr>
+      <tr><td><code>durationMs</code></td><td>How long the run took.</td></tr>
+      <tr><td><code>dryRun</code></td><td>Whether anything was actually kept.</td></tr>
+      <tr><td><code>toArray()</code></td><td>All of the above, for logging.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Why the id map exists</h2>
+  <p>Without it, rewiring a duplicated tree means matching records by a human-readable column:</p>
+  <div class="codewrap"><pre><s>// fragile: two versions with the same name silently mis-map,</s>
+<s>// and a renamed one drops out entirely</s>
+$map = $original-&gt;versions-&gt;mapWithKeys(<em>fn</em> ($v) =&gt; [
+    $v-&gt;id =&gt; $copy-&gt;versions-&gt;firstWhere(<u>'name'</u>, $v-&gt;name)?-&gt;id,
+]);</pre></div>
+  <p>With it, the mapping is the one the engine actually created:</p>
+  <div class="codewrap"><pre>$result = $product-&gt;duplicateWithResult();
+
+<em>foreach</em> ($descriptions <em>as</em> $description) {
+    $description-&gt;update([
+        <u>'version_id'</u> =&gt; $result-&gt;idMap(<i>Version</i>::class)[$description-&gt;version_id],
+    ]);
+}</pre></div>
+
+  <h2>In a listener</h2>
+  <p>The <code>Duplicated</code> event carries the whole result, after the transaction commits.</p>
+  <div class="codewrap"><pre><em>use</em> <i>Gabrielesbaiz\DuplicateToolkit\Events\Duplicated</i>;
+
+<i>Event</i>::listen(<i>Duplicated</i>::class, <em>function</em> (<i>Duplicated</i> $event) {
+    <i>Log</i>::info(<u>'Duplicated'</u>, $event-&gt;result-&gt;toArray());
+});</pre></div>
+</section>
+
+<section id="commands" data-title="Artisan commands">
+  <span class="kicker">Reference</span>
+  <h1 class="page-title">Artisan commands</h1>
+  <p class="lead">Four commands: one to look, one to do, one to generate, one to migrate.</p>
+
+  <h2>duplicate-toolkit:relations</h2>
+  <p>Prints the relation tree of a model and the strategy that applies to each relation — resolved from <em>your</em> <code>duplicateOptions()</code>, not the framework default.</p>
+  <div class="codewrap"><pre><em>php artisan</em> duplicate-toolkit:relations <u>"App\Models\Product"</u> --depth=2 --with-counts</pre></div>
+  <div class="codewrap"><pre>  INFO  Product (products) — 7 relation(s).
+
+  Relation           Type            Related       Strategy   Rows
+  ────────────────────────────────────────────────────────────────
+  versions           HasMany         Version       <u>copy</u>       12
+    └─ descriptions  HasMany         Description   <u>copy</u>       148
+  setting            HasOne          Setting       <u>copy</u>       1
+  notes              MorphMany       Note          <u>copy</u>       3
+  categories         BelongsToMany   Category      <i>reference</i>  4
+  tags               BelongsToMany   Tag           <i>reference</i>  22
+  auditLogs          HasMany         AuditLog      <s>skip</s>       940</pre></div>
+  <table>
+    <thead><tr><th>Flag</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td><code>--depth=N</code></td><td>How many levels to walk. Default 1.</td></tr>
+      <tr><td><code>--with-counts</code></td><td>Count rows per related table. One query each, off by default.</td></tr>
+      <tr><td><code>--all</code></td><td>Include parent and through relations, which are never duplicated.</td></tr>
+      <tr><td><code>--json</code></td><td>Machine readable output.</td></tr>
+    </tbody>
+  </table>
+  <p>Omit the model argument for a searchable picker.</p>
+
+  <h2>duplicate-toolkit:duplicate</h2>
+  <p>Duplicates one record. Interactively it walks you through model, record, relations and a dry-run plan before writing anything; the relation checkboxes come pre-ticked from the model's own options, so pressing Enter through the prompts reproduces production behaviour.</p>
+  <div class="codewrap"><pre><em>php artisan</em> duplicate-toolkit:duplicate Product 41 \
+    --only=versions,bundles \
+    --reference=categories \
+    --suffix=<u>'name= - COPY'</u> \
+    --depth=2 \
+    --dry-run</pre></div>
+  <table>
+    <thead><tr><th>Flag</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td><code>--only=a,b</code></td><td>Copy only these; skip the rest.</td></tr>
+      <tr><td><code>--reference=a</code></td><td>Attach the originals instead of copying.</td></tr>
+      <tr><td><code>--exclude=a</code></td><td>Skip the relation.</td></tr>
+      <tr><td><code>--exclude-column=c</code> <code>--unique=c</code></td><td>Column rules.</td></tr>
+      <tr><td><code>--set=c=v</code> <code>--suffix=c=s</code> <code>--replace=c=a:b</code></td><td>Attribute overrides.</td></tr>
+      <tr><td><code>--depth=N</code></td><td>How deep to follow.</td></tr>
+      <tr><td><code>--quiet-events</code></td><td>Save without firing model events.</td></tr>
+      <tr><td><code>--dry-run</code></td><td>Show the plan, write nothing.</td></tr>
+      <tr><td><code>--queue</code></td><td>Dispatch instead of running inline.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>duplicate-toolkit:make-options</h2>
+  <p>Runs the same relation picker and writes a typed <code>duplicateOptions()</code> into the model, adding the trait, the <code>Duplicatable</code> interface and the imports if they are missing, and pre-excluding <code>*_count</code> columns. It shows the code and asks before writing.</p>
+  <div class="codewrap"><pre><em>php artisan</em> duplicate-toolkit:make-options <u>"App\Models\Product"</u> --print</pre></div>
+
+  <h2>duplicate-toolkit:upgrade</h2>
+  <p>Rewrites 1.x usages to the 2.0 API and reports the two cases that need a human decision. See <a href="#/upgrade">Upgrading from 1.x</a>.</p>
+  <div class="codewrap"><pre><em>php artisan</em> duplicate-toolkit:upgrade app --dry-run
+<em>php artisan</em> duplicate-toolkit:upgrade app</pre></div>
+</section>
+
+<section id="config" data-title="Configuration">
+  <span class="kicker">Reference</span>
+  <h1 class="page-title">Configuration</h1>
+  <p class="lead">Every key has a per-duplication equivalent on <code>DuplicateOptions</code>, and the options always win.</p>
+
+  <div class="codewrap"><pre><em>php artisan</em> vendor:publish --tag=duplicate-toolkit-config</pre></div>
+
+  <h2>Keys</h2>
+  <table>
+    <thead><tr><th>Key</th><th>Default</th><th>Controls</th></tr></thead>
+    <tbody>
+      <tr><td><code>model_namespaces</code></td><td><code>['App\Models', 'App']</code></td><td>Where the commands look when you pass a short model name.</td></tr>
+      <tr><td><code>max_depth</code></td><td><code>1</code></td><td>How many levels of relations are followed. Deeper is opt-in — a second level often reaches transactional tables.</td></tr>
+      <tr><td><code>chunk_size</code></td><td><code>500</code></td><td><code>lazyById()</code> chunk size when copying relations.</td></tr>
+      <tr><td><code>save_quietly</code></td><td><code>false</code></td><td>Save duplicates without firing Eloquent events.</td></tr>
+      <tr><td><code>unique_strategy</code></td><td><code>NumericSuffix</code></td><td>How unique columns are resolved.</td></tr>
+      <tr><td><code>unique_format</code></td><td><code>' (%d)'</code></td><td>Format used by the numeric strategy.</td></tr>
+      <tr><td><code>excluded_columns</code></td><td><code>[]</code></td><td>Columns never copied, globally.</td></tr>
+      <tr><td><code>excluded_column_patterns</code></td><td><code>['/_count$/']</code></td><td>Column patterns never copied, globally.</td></tr>
+      <tr><td><code>default_relation_strategy</code></td><td><code>Copy</code></td><td>Fallback for child relations.</td></tr>
+      <tr><td><code>default_pivoted_relation_strategy</code></td><td><code>Reference</code></td><td>Fallback for pivoted relations.</td></tr>
+      <tr><td><code>provenance_column</code></td><td><code>'duplicated_from_id'</code></td><td>Column written by <code>trackProvenance()</code>.</td></tr>
+      <tr><td><code>discovery.invoke_untyped</code></td><td><code>false</code></td><td>Allow discovery to call relation methods with no return type.</td></tr>
+      <tr><td><code>discovery.cache</code></td><td><code>true</code></td><td>Memoise discovered relations per class.</td></tr>
+      <tr><td><code>copy_trashed</code></td><td><code>false</code></td><td>Copy soft-deleted children.</td></tr>
+      <tr><td><code>media.enabled</code></td><td><code>true</code></td><td>Copy medialibrary collections when installed.</td></tr>
+      <tr><td><code>queue.connection</code> <code>queue.queue</code></td><td><code>null</code></td><td>Where <code>DuplicateModel</code> is dispatched.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note"><b>Timestamps and soft deletes are not configurable</b> — <code>created_at</code>, <code>updated_at</code> and <code>deleted_at</code> are always excluded. There is no sensible case for copying them.</div>
+</section>
+
+<section id="events" data-title="Events and queue">
+  <span class="kicker">Reference</span>
+  <h1 class="page-title">Events and queue</h1>
+  <p class="lead">Two Eloquent model events, four dispatched events, and a batchable job.</p>
+
+  <h2>Model events</h2>
+  <p>Registered exactly like the framework's own. Returning <code>false</code> from a <code>duplicating</code> listener aborts the run and nothing is written.</p>
+  <div class="codewrap"><pre><em>protected static function</em> booted(): <em>void</em>
+{
+    <em>static</em>::duplicating(<em>function</em> (<i>Product</i> $product) {
+        <em>return</em> $product-&gt;is_locked === <em>false</em>;   <s>// false aborts</s>
+    });
+
+    <em>static</em>::duplicated(<em>fn</em> (<i>Product</i> $product) =&gt; ...);
+}</pre></div>
+
+  <h2>Dispatched events</h2>
+  <table>
+    <thead><tr><th>Event</th><th>When</th><th>Carries</th></tr></thead>
+    <tbody>
+      <tr><td><code>Duplicating</code></td><td>Before anything is written</td><td>source, resolved options</td></tr>
+      <tr><td><code>Duplicated</code></td><td>After the transaction commits</td><td>source, duplicate, full result</td></tr>
+      <tr><td><code>RelationDuplicating</code></td><td>Before each relation</td><td>relation meta, chosen strategy</td></tr>
+      <tr><td><code>RelationDuplicated</code></td><td>After each relation</td><td>relation meta, strategy, record count</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><b><code>Duplicated</code> fires after commit</b>, so anything it triggers sees rows that are actually there. On a dry run it does not fire at all.</div>
+
+  <h2>The queue</h2>
+  <div class="codewrap"><pre><i>Duplicate</i>::of($product)-&gt;dispatch();
+<i>Duplicate</i>::of($product)-&gt;onQueue(<u>'duplicates'</u>)-&gt;onConnection(<u>'redis'</u>)-&gt;dispatch();</pre></div>
+  <p><code>Jobs\DuplicateModel</code> is <code>ShouldQueue</code> and <code>Batchable</code>, tagged for Horizon, and guarded by <code>WithoutOverlapping</code> keyed on the source model — so the same record is never duplicated twice concurrently. The connection and queue default to <code>duplicate-toolkit.queue</code>.</p>
+  <div class="codewrap"><pre><i>Bus</i>::batch(
+    $products-&gt;map(<em>fn</em> ($p) =&gt; <em>new</em> <i>DuplicateModel</i>($p))-&gt;all()
+)-&gt;dispatch();</pre></div>
+  <div class="note warn"><b>Closures cannot be queued.</b> Options are serialised with the job, so <code>mutate()</code>, <code>beforeSave()</code>, <code>afterSave()</code> and <code>relationUsing()</code> must live on the model's <code>duplicateOptions()</code> rather than be passed at dispatch time.</div>
+</section>
+
+<section id="discovery" data-title="Relation discovery">
+  <span class="kicker">Reference</span>
+  <h1 class="page-title">Relation discovery</h1>
+  <p class="lead">Relations are found by reflecting on method return types. Nothing is invoked, no file is read, and results cannot leak between model classes.</p>
+
+  <h2>The contract</h2>
+  <div class="codewrap"><pre><em>public function</em> versions(): <i>HasMany</i>       <s>// ✓ discovered</s>
+{
+    <em>return</em> $this-&gt;hasMany(<i>Version</i>::class);
+}
+
+<em>public function</em> versions()                <s>// ✗ invisible by default</s>
+{
+    <em>return</em> $this-&gt;hasMany(<i>Version</i>::class);
+}</pre></div>
+  <p>Add the return type. It is better code regardless, and it is what lets discovery stay free of side effects.</p>
+
+  <h2>If you cannot</h2>
+  <div class="codewrap"><pre><s>// config/duplicate-toolkit.php</s>
+<u>'discovery'</u> =&gt; [<u>'invoke_untyped'</u> =&gt; <em>true</em>],</pre></div>
+  <div class="note warn"><b>This executes your code.</b> Every public, argument-less method without a return type will be called to see whether it returns a relation. If any of them have side effects, they will happen. Off by default for that reason.</div>
+
+  <h2>Why it was rewritten</h2>
+  <p>The 1.x implementation opened the model's source file with <code>SplFileObject</code>, matched on <code>stripos($code, '$this-&gt;hasMany(')</code>, and then invoked every public method to confirm. That broke under opcache, on eval'd classes, and on relations defined in traits — and it ran accessors that were never meant to be called during discovery.</p>
+  <p>It also kept a single static array of discovered relations that was never cleared, so duplicating a second model class in the same request inherited the first model's relations. The 2.0 cache is keyed by class name, which makes that failure structurally impossible.</p>
+
+  <h2>Using the inspector directly</h2>
+  <div class="codewrap"><pre><em>use</em> <i>Gabrielesbaiz\DuplicateToolkit\Support\RelationInspector</i>;
+
+$inspector = app(<i>RelationInspector</i>::class);
+
+$inspector-&gt;for($product);              <s>// every relation</s>
+$inspector-&gt;duplicatableFor($product);  <s>// children and pivoted only</s>
+$inspector-&gt;get($product, <u>'versions'</u>);  <s>// one RelationMeta</s>
+$inspector-&gt;tree($product, depth: 2);   <s>// nested, cycle-safe</s></pre></div>
+  <p>Each entry is a <code>RelationMeta</code>: <code>name</code>, <code>parentClass</code>, <code>type</code>, <code>relatedClass</code>, <code>kind</code>, plus <code>shortType()</code>, <code>relatedBasename()</code> and <code>defaultStrategy()</code>.</p>
+</section>
+
+<section id="recipes" data-title="Recipes">
+  <span class="kicker">More</span>
+  <h1 class="page-title">Recipes</h1>
+  <p class="lead">Patterns that come up repeatedly, written out.</p>
+
+  <h2>Rename the copy without a second write</h2>
+  <div class="codewrap"><pre>$copy = $model-&gt;duplicate(<em>fn</em> ($o) =&gt; $o-&gt;suffix(<u>'name'</u>, <u>' - COPY'</u>));</pre></div>
+
+  <h2>Re-parent while duplicating</h2>
+  <p>Duplication is a reasonable way to move a row under a different parent: copy it, and force the foreign keys in the same insert.</p>
+  <div class="codewrap"><pre>$copy = $description-&gt;duplicate(<em>fn</em> ($o) =&gt; $o-&gt;withAttributes([
+    <u>'product_id'</u> =&gt; $target-&gt;product_id,
+    <u>'version_id'</u> =&gt; $target-&gt;id,
+]));</pre></div>
+
+  <h2>Copy a product but keep the original categories</h2>
+  <div class="codewrap"><pre>$result = $product-&gt;duplicateWithResult(
+    <em>fn</em> ($o) =&gt; $o-&gt;referenceRelations(<u>'categories'</u>)
+);</pre></div>
+  <p>The copied bundles are attached to the same category rows. No category is duplicated, and the pivot payload comes across.</p>
+
+  <h2>Rewire grandchildren with the id map</h2>
+  <div class="codewrap"><pre>$result = $product-&gt;duplicateWithResult();
+$versions = $result-&gt;idMap(<i>Version</i>::class);
+
+<em>foreach</em> ($oldDescriptions <em>as</em> $description) {
+    $description-&gt;update([<u>'version_id'</u> =&gt; $versions[$description-&gt;version_id]]);
+}</pre></div>
+
+  <h2>Bulk duplicate with search and replace</h2>
+  <div class="codewrap"><pre><em>foreach</em> ($products <em>as</em> $product) {
+    $product-&gt;duplicate(<em>fn</em> ($o) =&gt; $o-&gt;replace(<u>'name'</u>, <u>'2025'</u>, <u>'2026'</u>));
+}</pre></div>
+
+  <h2>Decide inline or queued, by size</h2>
+  <div class="codewrap"><pre>$plan = <i>Duplicate</i>::of($product)-&gt;preview();
+
+<em>if</em> ($plan-&gt;count() &gt; 5_000) {
+    <i>Duplicate</i>::of($product)-&gt;onQueue(<u>'long'</u>)-&gt;dispatch();
+} <em>else</em> {
+    <i>Duplicate</i>::of($product)-&gt;execute();
+}</pre></div>
+
+  <h2>Inside a Nova action</h2>
+  <div class="codewrap"><pre><em>public function</em> handle(<i>ActionFields</i> $fields, <i>Collection</i> $models)
+{
+    $model = $models-&gt;first();
+
+    $result = $model-&gt;duplicateWithResult(
+        <em>fn</em> ($o) =&gt; $o-&gt;suffix(<u>'name'</u>, <u>' - COPY'</u>)
+    );
+
+    <em>return</em> <i>Action</i>::visit(<u>'/resources/products/'</u>.$result-&gt;model-&gt;getKey());
+}</pre></div>
+  <div class="note warn"><b>Watch the loop.</b> A Nova action receives a collection. Returning from inside <code>foreach ($models as $model)</code> processes only the first one — a mistake easily made, and easily missed.</div>
+
+  <h2>Record where a copy came from</h2>
+  <div class="codewrap"><pre><i>Schema</i>::table(<u>'products'</u>, <em>fn</em> ($t) =&gt; $t-&gt;foreignId(<u>'duplicated_from_id'</u>)-&gt;nullable());
+
+$copy = $product-&gt;duplicate(<em>fn</em> ($o) =&gt; $o-&gt;trackProvenance());
+$copy-&gt;duplicated_from_id;   <s>// 41</s></pre></div>
+  <p>The column is written only if it exists on the table, so turning provenance on globally is safe for models that do not have it.</p>
+</section>
+
+<section id="trouble" data-title="Troubleshooting">
+  <span class="kicker">More</span>
+  <h1 class="page-title">Troubleshooting</h1>
+  <p class="lead">The failures people actually hit, and what each one means.</p>
+
+  <h2>A relation is not being duplicated</h2>
+  <div class="codewrap"><pre><em>php artisan</em> duplicate-toolkit:relations <u>"App\Models\Product"</u></pre></div>
+  <ul class="plain">
+    <li><b>Missing from the list entirely</b> — the method has no return type. See <a href="#/discovery">Relation discovery</a>.</li>
+    <li><b>Listed as <code>skip</code> or <code>reference</code></b> — that is your <code>duplicateOptions()</code>, or the type default. The command reads your configuration, so what it prints is what would happen.</li>
+    <li><b>Listed but nothing was written</b> — check <code>depth()</code>. A relation beyond the limit is quietly dropped unless <code>strictDepth()</code> is on.</li>
+  </ul>
+
+  <h2>My duplicateOptions() is ignored</h2>
+  <p>The method must be <code>public function duplicateOptions(): DuplicateOptions</code>. The 1.x name <code>getDuplicateOptions()</code> is no longer called — run <a href="#/upgrade">the upgrade command</a>.</p>
+
+  <h2>duplicate() does nothing, or the wrong thing</h2>
+  <p>Your class probably defines its own <code>duplicate()</code> method, which silently shadows the trait — PHP gives the class method priority and reports no error. Rename yours, or go through the facade:</p>
+  <div class="codewrap"><pre><i>Duplicate</i>::of($model)-&gt;execute();</pre></div>
+
+  <h2>Call to undefined method ::duplicate()</h2>
+  <p>The trait is missing, or you are calling it on a query builder rather than a model instance. <code>Product::query()-&gt;duplicate()</code> is not a thing.</p>
+
+  <h2>Counters are copied</h2>
+  <p>Add <code>excludeColumnsMatching('/_count$/')</code>, or rely on the shipped config default. A copied counter is wrong the instant it is written.</p>
+
+  <h2>Observers fire when I did not expect them to</h2>
+  <p>Use <code>quietly()</code>, and make sure you are not following the duplication with an <code>update()</code> — that second write fires everything the first one suppressed. Fold the change into <a href="#/attributes">an attribute override</a> instead.</p>
+
+  <h2>It is slow, or runs out of memory</h2>
+  <ul class="plain">
+    <li>Run <code>preview()</code> first to find out how many rows are genuinely involved.</li>
+    <li>Lower <code>depth()</code>, or <code>excludeRelations()</code> the ones you do not need.</li>
+    <li>Raise <code>chunk_size</code> if rows are small, lower it if they are large.</li>
+    <li>Move it to the queue with <code>-&gt;dispatch()</code>.</li>
+  </ul>
+
+  <h2>MaxDepthExceededException</h2>
+  <p>You turned on <code>strictDepth()</code> and the tree really is deeper than the limit. Either raise <code>depth()</code> or accept the truncation by dropping strict mode.</p>
+
+  <h2>NotDuplicatableException</h2>
+  <p>The model does not exist in the database yet. Duplication reads relations through queries, so there has to be a row to read.</p>
+</section>
+
+<section id="upgrade" data-title="Upgrading from 1.x">
+  <span class="kicker">More</span>
+  <h1 class="page-title">Upgrading from 1.x</h1>
+  <p class="lead">2.0 is a rewrite. The concepts are the same; the names and the entry points changed, and there is a codemod for most of it.</p>
+
+  <div class="note warn"><b>Read this before upgrading.</b> 1.x leaked relations between model classes in the same request, discovered relations by reading your source files and invoking every public method, and crashed on <code>morphToMany</code>. If you duplicated two different model classes in one request under 1.x, treat the result as suspect.</div>
+
+  <h2>Requirements changed</h2>
+  <table>
+    <thead><tr><th></th><th>1.x</th><th>2.0</th></tr></thead>
+    <tbody>
+      <tr><td>PHP</td><td>8.0+</td><td><b>8.3+</b></td></tr>
+      <tr><td>Laravel</td><td>10, 11, 12</td><td><b>12, 13</b></td></tr>
+    </tbody>
+  </table>
+
+  <h2>Run the codemod</h2>
+  <div class="codewrap"><pre><em>composer require</em> gabrielesbaiz/duplicate-toolkit:^2.0
+
+<em>php artisan</em> duplicate-toolkit:upgrade app --dry-run
+<em>php artisan</em> duplicate-toolkit:upgrade app</pre></div>
+
+  <h2>What it rewrites</h2>
+  <table>
+    <thead><tr><th>1.x</th><th>2.0</th></tr></thead>
+    <tbody>
+      <tr><td><code>Traits\HasDuplicates</code></td><td><code>Concerns\HasDuplicates</code></td></tr>
+      <tr><td><code>Options\DuplicateOptions</code></td><td><code>DuplicateOptions</code></td></tr>
+      <tr><td><code>getDuplicateOptions()</code></td><td><code>duplicateOptions()</code></td></tr>
+      <tr><td><code>DuplicateOptions::instance()</code></td><td><code>::make()</code> <span style="color:#63D6A2">instance() still works</span></td></tr>
+      <tr><td><code>$model-&gt;saveAsDuplicate()</code></td><td><code>$model-&gt;duplicate()</code></td></tr>
+      <tr><td><code>-&gt;disableDeepDuplication()</code></td><td><code>-&gt;shallow()</code></td></tr>
+      <tr><td><code>-&gt;saveQuietly()</code></td><td><code>-&gt;quietly()</code></td></tr>
+      <tr><td><code>Helpers\RelationHelper</code></td><td><code>Support\RelationInspector</code></td></tr>
+    </tbody>
+  </table>
+  <p><code>excludeColumns()</code>, <code>uniqueColumns()</code>, <code>excludeRelations()</code>, <code>excludeRelationColumns()</code> and <code>uniqueRelationColumns()</code> keep their names and their behaviour.</p>
+
+  <h2>What it will not rewrite</h2>
+  <h3>1 · A model that already defines duplicate()</h3>
+  <p>The 2.0 entry point is <code>duplicate()</code>. A method of that name on your class silently shadows the trait — no error, just the wrong behaviour. Rename yours, or route through <code>Duplicate::of($model)</code>. The command reports every file where this applies.</p>
+
+  <h3>2 · saveAsDuplicate() followed by update()</h3>
+  <p>This pattern is the main reason 2.0 exists, and rewriting it automatically would change behaviour rather than just names.</p>
+  <div class="codewrap"><pre><s>// 1.x — two writes; the update fires what saveQuietly() suppressed</s>
+$copy = $model-&gt;saveAsDuplicate();
+$copy-&gt;update([<u>'name'</u> =&gt; $copy-&gt;name.<u>' - COPY'</u>]);
+
+<s>// 2.0 — one write, applied before the insert</s>
+$copy = $model-&gt;duplicate(<em>fn</em> ($o) =&gt; $o-&gt;suffix(<u>'name'</u>, <u>' - COPY'</u>));</pre></div>
+
+  <h2>Behaviour worth knowing about</h2>
+  <ul class="plain">
+    <li><b>Options are immutable.</b> Every method returns a new instance. <code>$o-&gt;excludeColumns('x');</code> without using the result now does nothing.</li>
+    <li><b>No magic property access.</b> <code>$options-&gt;excludedColumns</code> is gone; use <code>getExcludedColumns()</code>.</li>
+    <li><b>Relation methods need return types.</b> See <a href="#/discovery">Relation discovery</a>.</li>
+    <li><b>Pivoted relations are still referenced by default</b> — the 1.x behaviour, now named explicitly as <code>referenceRelations()</code>.</li>
+  </ul>
+
+  <h2>Worth adopting afterwards</h2>
+  <ul class="plain">
+    <li>Replace name-matching lookups with <code>$result-&gt;idMap()</code>.</li>
+    <li>Replace hand-listed <code>*_count</code> exclusions with <code>excludeColumnsMatching('/_count$/')</code>.</li>
+    <li>Run <code>preview()</code> before large duplications.</li>
+  </ul>
+</section>
+
+<section id="project" data-title="Project &amp; licence">
+  <span class="kicker">More</span>
+  <h1 class="page-title">Project &amp; licence</h1>
+  <p class="lead">Who maintains this, what it promises, and what it does not.</p>
+
+  <h2>Licence</h2>
+  <p>MIT, and it will stay MIT. Nothing is paywalled, nothing phones home, and no feature is held back for sponsors.</p>
+
+  <h2>Quality gates</h2>
+  <table>
+    <thead><tr><th>Gate</th><th>Standard</th></tr></thead>
+    <tbody>
+      <tr><td>Static analysis</td><td>PHPStan level max, no baseline, no ignores</td></tr>
+      <tr><td>Style</td><td>Pint, Laravel preset with strict types enforced</td></tr>
+      <tr><td>Refactoring</td><td>Rector, PHP 8.3 and Laravel sets</td></tr>
+      <tr><td>Tests</td><td>Pest, against a real Testbench workbench</td></tr>
+      <tr><td>Matrix</td><td>PHP 8.3 and 8.4 × Laravel 12 and 13, prefer-lowest and prefer-stable</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Credits</h2>
+  <p>Written and maintained by <a href="https://github.com/gabrielesbaiz">Gabriele Sbaiz</a>. The 1.x line was a fork of <a href="https://github.com/neurony/laravel-duplicate">neurony/laravel-duplicate</a>, whose design informed this one; 2.0 shares no code with it.</p>
+
+  <h2>Security</h2>
+  <p>Report vulnerabilities privately to <code>gabriele@sbaiz.com</code> rather than opening a public issue. Authorisation is your application's responsibility — this package duplicates whatever model it is handed.</p>
+
+  <h2>Disclaimer</h2>
+  <p>This package writes to your database. It creates rows, copies relations and, when asked, attaches existing records to new ones. Whoever deploys it is responsible for deciding whether the result is correct for their schema — which includes reviewing what each relation strategy will do, running <code>preview()</code> against production-shaped data, keeping backups, and understanding that duplicated rows may trigger observers, listeners, queued jobs and search indexing unless <code>quietly()</code> is used.</p>
+</section>
+
+<section id="changelog" data-title="Changelog">
+  <span class="kicker">More</span>
+  <h1 class="page-title">Changelog</h1>
+  <p class="lead">What changed, and when. Dates are the release date; versions follow <a href="https://semver.org">semantic versioning</a>.</p>
+
+  <div class="rel">
+    <div class="rel-h">
+      <h2 id="v200">2.0.0</h2>
+      <time>2026-09-24</time>
+      <span class="pill" style="color:#FFC46B;border-color:rgba(255,196,107,.4)">Breaking</span>
+    </div>
+    <p>A full rewrite. See <a href="#/upgrade">Upgrading from 1.x</a> for the migration path and the <code>duplicate-toolkit:upgrade</code> codemod.</p>
+    <p><b>Requirements:</b> PHP 8.3+ (was 8.0+), Laravel 12 and 13 (was 10, 11, 12).</p>
+
+    <h3 class="fix">Fixed</h3>
+    <ul class="plain">
+      <li><b>The package had no service provider.</b> <code>DuplicateToolkitServiceProvider</code> was referenced by the test suite but never existed, and <code>composer.json</code> had no <code>extra.laravel</code> block, so nothing auto-discovered.</li>
+      <li><b>Relations leaked between model classes.</b> <code>RelationHelper::$relations</code> was a static accumulator that was never reset, so duplicating a second model in the same request inherited the first model's relations.</li>
+      <li><b>Relation discovery read model source files</b> with <code>SplFileObject</code> and matched on <code>stripos</code>, then invoked every public method to test it. It broke under opcache, on eval'd classes and on relations declared in traits, and triggered side effects in accessors.</li>
+      <li><code>hasManyThrough</code> was matched during discovery and then silently dropped.</li>
+      <li>Pivot attributes were read through <code>getOtherKey()</code>, a deprecated alias, and assumed a loaded pivot — a fatal on <code>morphToMany</code>.</li>
+      <li>Unique column resolution queried an unsaved replica and never excluded the source row, producing wrong suffixes and a possible infinite loop. It now resolves in a single query.</li>
+      <li><code>saveAsDuplicate()</code> wrapped everything in <code>try { … } catch (Exception $e) { throw $e; }</code>, which caught nothing and missed <code>Error</code>.</li>
+    </ul>
+
+    <h3 class="add">Added</h3>
+    <ul class="plain">
+      <li><code>Duplicate</code> facade and a fluent builder: <code>Duplicate::of($model)-&gt;…-&gt;execute()</code>.</li>
+      <li><a href="#/result"><code>DuplicateResult</code></a> with the old key to new key map, per-model counts and timing.</li>
+      <li>Three <a href="#/strategies">relation strategies</a> — copy, reference, skip — with dot notation for nested relations.</li>
+      <li><a href="#/attributes">Attribute overrides</a> applied before the insert: <code>suffix()</code>, <code>prefix()</code>, <code>replace()</code>, <code>withAttributes()</code>, <code>mutate()</code>.</li>
+      <li><code>excludeColumnsMatching()</code> for pattern-based column exclusion.</li>
+      <li>Configurable <a href="#/depth">depth with cycle detection</a>, plus <code>strictDepth()</code>.</li>
+      <li><code>preview()</code> and <code>--dry-run</code>: every write performed inside a transaction, then rolled back.</li>
+      <li><a href="#/events">Event classes</a> and <code>beforeSave()</code> / <code>afterSave()</code> callbacks.</li>
+      <li>Queued, batchable <code>Jobs\DuplicateModel</code> with overlap protection.</li>
+      <li>Custom per-relation handlers via <code>relationUsing()</code>, and the <code>#[DuplicateRelations]</code> attribute.</li>
+      <li>Four <a href="#/commands">Artisan commands</a>: <code>relations</code>, <code>duplicate</code>, <code>make-options</code>, <code>upgrade</code>.</li>
+      <li>Soft delete awareness, UUID and ULID keys, a provenance column, and optional media library copying.</li>
+      <li>A publishable <a href="#/config">config file</a>.</li>
+    </ul>
+
+    <h3 class="chg">Changed</h3>
+    <ul class="plain">
+      <li><code>Traits\HasDuplicates</code> → <code>Concerns\HasDuplicates</code>; <code>Options\DuplicateOptions</code> → <code>DuplicateOptions</code>.</li>
+      <li><code>saveAsDuplicate()</code> → <code>duplicate()</code>; <code>getDuplicateOptions()</code> → <code>duplicateOptions()</code>, now optional.</li>
+      <li><code>disableDeepDuplication()</code> → <code>shallow()</code>; <code>saveQuietly()</code> → <code>quietly()</code>.</li>
+      <li><code>DuplicateOptions</code> is immutable and fully typed — the <code>__get()</code> magic accessor is gone.</li>
+      <li>Relations are copied with <code>lazyById()</code> chunking in one transaction; <code>Duplicated</code> fires after commit.</li>
+      <li><code>declare(strict_types=1)</code> across the codebase.</li>
+    </ul>
+
+    <h3 class="rem">Removed</h3>
+    <ul class="plain">
+      <li><code>Helpers\RelationHelper</code>, replaced by <a href="#/discovery"><code>Support\RelationInspector</code></a>. Its unused predicates are gone.</li>
+      <li><code>.php-cs-fixer.php</code> and <code>tlint.json</code>, superseded by Pint.</li>
+    </ul>
+
+    <h3 class="add">Tooling</h3>
+    <ul class="plain">
+      <li>PHPStan at level max, Rector, Pint, and CI across PHP 8.3/8.4 × Laravel 12/13 on both <code>prefer-lowest</code> and <code>prefer-stable</code>.</li>
+      <li>A real Testbench workbench with models covering every relation type, soft deletes, UUID keys and cycles.</li>
+    </ul>
+  </div>
+
+  <div class="rel old">
+    <div class="rel-h">
+      <h2 id="v110">1.1.0</h2>
+      <time>2025-03-04</time>
+    </div>
+    <ul class="plain"><li>Added the <code>saveQuietly()</code> option.</li></ul>
+  </div>
+
+  <div class="rel old">
+    <div class="rel-h">
+      <h2 id="v100">1.0.0</h2>
+      <time>2025-03-04</time>
+    </div>
+    <ul class="plain"><li>Initial release, based on <a href="https://github.com/neurony/laravel-duplicate">neurony/laravel-duplicate</a>.</li></ul>
+  </div>
+</section>
+
+    <nav class="pager" id="pager" aria-label="Page navigation">
+      <a class="pg prev" id="pgprev" href="#/intro"><span>Previous</span><b></b></a>
+      <a class="pg next" id="pgnext" href="#/intro"><span>Next</span><b></b></a>
+    </nav>
+  </main>
+
+  <aside class="onthis" id="onthis">
+    <b>On this page</b>
+    <div id="subs"></div>
+  </aside>
+</div>
+
+<div class="kwrap" id="kwrap" role="dialog" aria-modal="true" aria-label="Search the documentation">
+  <div class="kbox">
+    <input id="kq" type="search" placeholder="Search pages and sections&hellip;" autocomplete="off" spellcheck="false">
+    <div class="kres" id="kres"></div>
+  </div>
+</div>
+
+<footer class="sitefoot">
+  <div class="fin">
+    <div><h4>Package</h4><ul>
+      <li><a href="https://github.com/gabrielesbaiz/duplicate-toolkit">GitHub</a></li>
+      <li><a href="https://packagist.org/packages/gabrielesbaiz/duplicate-toolkit">Packagist</a></li>
+      <li><a href="#/changelog">Changelog</a></li>
+    </ul></div>
+    <div><h4>Documentation</h4><ul>
+      <li><a href="#/intro">Introduction</a></li>
+      <li><a href="#/install">Installation</a></li>
+      <li><a href="#/config">Configuration</a></li>
+      <li><a href="#/trouble">Troubleshooting</a></li>
+    </ul></div>
+    <div><h4>Reference</h4><ul>
+      <li><a href="#/options">All options</a></li>
+      <li><a href="#/commands">Artisan commands</a></li>
+      <li><a href="#/upgrade">Upgrading from 1.x</a></li>
+    </ul></div>
+    <div><h4>Project</h4><ul>
+      <li><a href="#/project">Project &amp; licence</a></li>
+      <li><a href="https://github.com/gabrielesbaiz/duplicate-toolkit/blob/main/SECURITY.md">Security policy</a></li>
+      <li><a href="https://github.com/sponsors/gabrielesbaiz">Sponsor</a></li>
+    </ul></div>
+  </div>
+  <div class="colo">
+    <span>MIT licensed &middot; Built by Gabriele Sbaiz</span>
+    <span>3 strategies &middot; 4 commands &middot; PHPStan level <b>max</b></span>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+
+</body>
+</html>

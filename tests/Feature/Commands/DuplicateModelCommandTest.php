@@ -58,7 +58,7 @@ it('applies attribute overrides from flags', function (): void {
     $this->artisan('duplicate-toolkit:duplicate', [
         'model' => Product::class,
         'id' => $product->id,
-        '--suffix' => ['name= - COPIA'],
+        '--suffix' => ['name= - COPY'],
         '--set' => ['sku=NEW'],
         '--replace' => ['is_active=1:0'],
         '--no-interaction' => true,
@@ -66,7 +66,7 @@ it('applies attribute overrides from flags', function (): void {
 
     $copy = Product::latest('id')->firstOrFail();
 
-    expect($copy->name)->toBe('Widget - COPIA')
+    expect($copy->name)->toBe('Widget - COPY')
         ->and($copy->sku)->toBe('NEW');
 });
 
