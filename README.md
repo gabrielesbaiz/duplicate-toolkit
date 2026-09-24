@@ -60,21 +60,10 @@ php artisan vendor:publish --tag=duplicate-toolkit-config
 php artisan duplicate-toolkit:relations "App\Models\Product" --depth=2
 ```
 
-The service provider is auto-discovered: no migrations, no tables, no assets.
-Publishing the config is optional — the defaults duplicate correctly untouched.
-
-```php
-use Gabrielesbaiz\DuplicateToolkit\Concerns\HasDuplicates;
-
-class Product extends Model
-{
-    use HasDuplicates;
-}
-```
-
-```php
-$copy = $product->duplicate();
-```
+Add the `HasDuplicates` trait to a model and call `$model->duplicate()`. The
+service provider is auto-discovered — no migrations, no tables, no assets — and
+publishing the config is optional, since the defaults duplicate correctly
+untouched.
 
 **[Full installation guide →](https://gabrielesbaiz.github.io/duplicate-toolkit/#/install)**
 
