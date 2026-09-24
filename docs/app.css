@@ -90,7 +90,7 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.9em;color:var(--cy)}
   font:900 15px/1 "Archivo",sans-serif;color:var(--ink)}
 .brand b{font:500 10px/1 "IBM Plex Mono",monospace;color:var(--amb);letter-spacing:.14em;
   border:1px solid rgba(255,196,107,.4);padding:3px 5px;border-radius:2px}
-.menu{display:flex;gap:18px;margin-left:14px}
+.menu{display:flex;gap:18px;margin-left:auto}
 .menu a{font:500 13px/1 "Public Sans",sans-serif;color:var(--dim);text-decoration:none;transition:color .15s}
 .menu a:hover{color:var(--ink)}
 .menu a.here{color:var(--ink);font-weight:600}
@@ -99,7 +99,7 @@ code{font-family:"IBM Plex Mono",monospace;font-size:.9em;color:var(--cy)}
   border-radius:3px;cursor:pointer;font:700 12px/1 "Public Sans",sans-serif;
   transition:border-color .15s,color .15s}
 .themebtn:hover{border-color:var(--cy);color:var(--cy)}
-.searchbtn{margin-left:auto;display:flex;align-items:center;gap:9px;background:transparent;
+.searchbtn{display:flex;align-items:center;gap:9px;background:transparent;
   border:1px solid var(--line2);color:var(--faint);padding:8px 11px;border-radius:3px;cursor:pointer;
   font:400 12.5px/1 "Public Sans",sans-serif;transition:border-color .15s,color .15s}
 .searchbtn:hover{border-color:var(--cy);color:var(--ink)}
@@ -282,6 +282,10 @@ td code{white-space:nowrap}
 
 /* ── footer ───────────────────────────────────────────── */
 .sitefoot{border-top:1px solid var(--line2);background:var(--foot)}
+/* The home page is a narrower column than the guide, so the footer follows
+   whichever is above it rather than sitting wider than both. */
+body[data-route="home"] .fin,
+body[data-route="home"] .colo{max-width:1140px;padding-left:var(--hx);padding-right:var(--hx)}
 .fin{max-width:1560px;margin:0 auto;padding:44px var(--mx) 0;display:grid;gap:30px;
   grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
 .fin h4{font:500 10px/1 "IBM Plex Mono",monospace;letter-spacing:.2em;text-transform:uppercase;
@@ -516,3 +520,13 @@ td code{white-space:nowrap}
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;
     transition-duration:.001ms!important}
 }
+
+/* Each home section states a case; the guide page that argues it in full is
+   one link away, at the foot of the section rather than buried in the prose. */
+.deeper{margin-top:30px}
+.deeper a{display:inline-flex;align-items:center;gap:9px;text-decoration:none;
+  font:600 13.5px/1 "Public Sans",sans-serif;color:var(--cy);
+  border-bottom:1px solid transparent;padding-bottom:4px;
+  transition:border-color .15s ease,gap .15s ease}
+.deeper a:hover{border-bottom-color:var(--cy);gap:14px}
+.deeper span{font-size:15px;line-height:1}
