@@ -365,6 +365,10 @@ class Duplicator
                 continue;
             }
 
+            if ($this->inspector->isMediaLibraryRelation($meta)) {
+                continue;
+            }
+
             $strategy = $options->strategyFor($name)
                 ?? $attributeStrategies[$name]
                 ?? $this->defaultStrategyFor($meta);
@@ -394,6 +398,10 @@ class Duplicator
         $attributeStrategies = $this->inspector->attributeStrategies($source);
 
         foreach ($this->inspector->duplicatableFor($source) as $name => $meta) {
+            if ($this->inspector->isMediaLibraryRelation($meta)) {
+                continue;
+            }
+
             $strategy = $options->strategyFor($name)
                 ?? $attributeStrategies[$name]
                 ?? $this->defaultStrategyFor($meta);
@@ -654,6 +662,7 @@ class Duplicator
     protected function copyMedia(Model $source, Model $duplicate, DuplicateOptions $options): void
     {
         $enabled = $options->shouldCopyMedia()
+            ?? $this->mediaRelationStrategy($source, $options)
             ?? Cast::toBool($this->config->get('duplicate-toolkit.media.enabled'), true);
 
         if (! $enabled || ! interface_exists(HasMedia::class) || ! class_exists(Media::class)) {
@@ -669,6 +678,38 @@ class Duplicator
                 $media->copy($duplicate, $media->collection_name, $media->disk);
             }
         }
+    }
+
+    /**
+     * Read the media decision out of a strategy set on the media relation.
+     *
+     * The relation itself is never walked, since only the media library knows
+     * how to move a media row together with its file. Naming that relation is
+     * still a legitimate way of saying whether the copy should carry the media
+     * over, so a strategy declared for it drives the media pass instead: only
+     * "copy" turns it on, and every other strategy turns it off.
+     */
+    protected function mediaRelationStrategy(Model $source, DuplicateOptions $options): ?bool
+    {
+        if (! interface_exists(HasMedia::class) || ! $source instanceof HasMedia) {
+            return null;
+        }
+
+        $attributeStrategies = $this->inspector->attributeStrategies($source);
+
+        foreach ($this->inspector->for($source) as $name => $meta) {
+            if (! $this->inspector->isMediaLibraryRelation($meta)) {
+                continue;
+            }
+
+            $strategy = $options->strategyFor($name) ?? $attributeStrategies[$name] ?? null;
+
+            if ($strategy instanceof RelationStrategy) {
+                return $strategy === RelationStrategy::Copy;
+            }
+        }
+
+        return null;
     }
 
     /**

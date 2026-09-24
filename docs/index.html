@@ -631,8 +631,13 @@ $plan-&gt;counts();   <s>// ['Version' =&gt; 12, 'Description' =&gt; 148, ...]</
       <tr><td><code>morphToMany</code></td><td>reference</td><td>Same, through a morph pivot.</td></tr>
       <tr><td><code>belongsTo</code> <code>morphTo</code></td><td>skip</td><td>Always. Duplicating a parent would create a row the copy does not own.</td></tr>
       <tr><td><code>hasOneThrough</code> <code>hasManyThrough</code></td><td>skip</td><td>Always. The intermediate rows are not the copy's to write.</td></tr>
+      <tr><td>the medialibrary <code>media</code> relation</td><td>media pass</td><td>Always. Only the media library can move a row together with its file, so the relation is never walked — see below.</td></tr>
     </tbody>
   </table>
+
+  <h2>Media is not an ordinary relation</h2>
+  <p>A media row's file lives in a directory named after the row's key. Cloning that row the way any other <code>morphMany</code> is cloned would give the copy a record pointing at the original's directory, and a duplicated <code>uuid</code> with it. So the relation is never walked: the duplicator asks the media library to copy each item instead, which writes both the row and the file.</p>
+  <p>Naming the relation still says whether the copy carries its media over — <code>copyRelations('media')</code> turns the media pass on, <code>excludeRelations('media')</code> turns it off — and <code>withMedia()</code> wins over both. Without medialibrary installed none of this applies.</p>
 
   <h2>Overriding them</h2>
   <div class="codewrap"><pre><i>DuplicateOptions</i>::make()
@@ -878,7 +883,7 @@ $plan-&gt;counts();   <s>// ['Version' =&gt; 12, 'Description' =&gt; 148, ...]</
       <tr><td><code>strictDepth()</code></td><td>Throw rather than truncate a deeper tree.</td></tr>
       <tr><td><code>quietly()</code></td><td>Save without firing Eloquent model events.</td></tr>
       <tr><td><code>withTrashed()</code></td><td>Copy soft-deleted children too.</td></tr>
-      <tr><td><code>withMedia(bool)</code></td><td>Copy medialibrary collections.</td></tr>
+      <tr><td><code>withMedia(bool)</code></td><td>Copy medialibrary collections. Wins over a strategy set on the <code>media</code> relation.</td></tr>
       <tr><td><code>trackProvenance(?string)</code></td><td>Write the source key to a column, if it exists.</td></tr>
       <tr><td><code>dryRun()</code></td><td>Write everything, then roll back.</td></tr>
       <tr><td><code>beforeSave(Closure)</code> <code>afterSave(Closure)</code></td><td>Hooks around each save in the tree.</td></tr>
@@ -1038,7 +1043,7 @@ $map = $original-&gt;versions-&gt;mapWithKeys(<em>fn</em> ($v) =&gt; [
       <tr><td><code>discovery.invoke_untyped</code></td><td><code>false</code></td><td>Allow discovery to call relation methods with no return type.</td></tr>
       <tr><td><code>discovery.cache</code></td><td><code>true</code></td><td>Memoise discovered relations per class.</td></tr>
       <tr><td><code>copy_trashed</code></td><td><code>false</code></td><td>Copy soft-deleted children.</td></tr>
-      <tr><td><code>media.enabled</code></td><td><code>true</code></td><td>Copy medialibrary collections when installed.</td></tr>
+      <tr><td><code>media.enabled</code></td><td><code>true</code></td><td>Copy medialibrary collections when installed. The <code>media</code> relation itself is never walked.</td></tr>
       <tr><td><code>queue.connection</code> <code>queue.queue</code></td><td><code>null</code></td><td>Where <code>DuplicateModel</code> is dispatched.</td></tr>
     </tbody>
   </table>

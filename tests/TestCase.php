@@ -9,6 +9,7 @@ use Gabrielesbaiz\DuplicateToolkit\Support\RelationInspector;
 use Illuminate\Contracts\Config\Repository;
 use Orchestra\Testbench\Concerns\WithWorkbench;
 use Orchestra\Testbench\TestCase as Orchestra;
+use Spatie\MediaLibrary\MediaLibraryServiceProvider;
 
 abstract class TestCase extends Orchestra
 {
@@ -31,6 +32,7 @@ abstract class TestCase extends Orchestra
     protected function getPackageProviders($app): array
     {
         return [
+            MediaLibraryServiceProvider::class,
             DuplicateToolkitServiceProvider::class,
         ];
     }
