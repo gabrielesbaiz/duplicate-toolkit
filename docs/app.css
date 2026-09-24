@@ -310,7 +310,10 @@ body[data-route="home"] .colo{max-width:1140px;padding-left:var(--hx);padding-ri
 /* The wash is the front page's own weather. Painting it on #home rather
    than on body means it does not follow you into the guide, where a
    gradient behind a reading column is just noise. */
-#home{background-image:radial-gradient(120% 70% at 78% -8%,var(--wash),transparent 62%)}
+/* Sections only pad from the top, so the last one would otherwise run
+   straight into the footer rule. */
+#home{background-image:radial-gradient(120% 70% at 78% -8%,var(--wash),transparent 62%);
+  padding-bottom:clamp(56px,7vw,104px)}
 /* A selling column is wider than a reading one, so the landing page keeps
    its own measure instead of inheriting the guide's --mx. */
 .wrap{max-width:1140px;margin:0 auto;padding:0 var(--hx)}
