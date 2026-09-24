@@ -86,12 +86,12 @@ This pattern is the main reason 2.0 exists:
 ```php
 // 1.x — two writes, and the update fires events that saveQuietly() meant to avoid
 $copy = $model->saveAsDuplicate();
-$copy->update(['name' => $copy->name.' - COPIA']);
+$copy->update(['name' => $copy->name.' - COPY']);
 ```
 
 ```php
 // 2.0 — one write, applied before the insert
-$copy = $model->duplicate(fn (DuplicateOptions $o) => $o->suffix('name', ' - COPIA'));
+$copy = $model->duplicate(fn (DuplicateOptions $o) => $o->suffix('name', ' - COPY'));
 ```
 
 The same applies to search-and-replace and to re-parenting:
