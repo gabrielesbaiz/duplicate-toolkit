@@ -1,276 +1,164 @@
-# 
+<p align="center">
+    <img src="art/duplicate-toolkit-logo.png" alt="DuplicateToolkit" width="600">
+</p>
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/gabrielesbaiz/duplicate-toolkit.svg?style=flat-square)](https://packagist.org/packages/gabrielesbaiz/duplicate-toolkit)
-[![Total Downloads](https://img.shields.io/packagist/dt/gabrielesbaiz/duplicate-toolkit.svg?style=flat-square)](https://packagist.org/packages/gabrielesbaiz/duplicate-toolkit)
+# DuplicateToolkit
 
-A lightweight helper package to handle Eloquent model duplication.
+Duplicate an Eloquent record and everything under it — deciding, per relation, whether to copy it, point at the original, or leave it alone.
 
-Original code from [neurony/laravel-duplicate](https://github.com/neurony/laravel-duplicate)
+[![Latest version](https://img.shields.io/packagist/v/gabrielesbaiz/duplicate-toolkit.svg?style=flat-square)](https://packagist.org/packages/gabrielesbaiz/duplicate-toolkit)
+[![PHP](https://img.shields.io/packagist/dependency-v/gabrielesbaiz/duplicate-toolkit/php?style=flat-square)](composer.json)
+[![Laravel](https://img.shields.io/packagist/dependency-v/gabrielesbaiz/duplicate-toolkit/illuminate%2Fsupport?style=flat-square&label=laravel)](composer.json)
+[![Downloads](https://img.shields.io/packagist/dt/gabrielesbaiz/duplicate-toolkit.svg?style=flat-square)](https://packagist.org/packages/gabrielesbaiz/duplicate-toolkit)
+[![Stars](https://img.shields.io/github/stars/gabrielesbaiz/duplicate-toolkit?style=flat-square&logo=github)](https://github.com/gabrielesbaiz/duplicate-toolkit/stargazers)
+[![Sponsor](https://img.shields.io/github/sponsors/gabrielesbaiz?style=flat-square&label=sponsor&logo=github)](https://github.com/sponsors/gabrielesbaiz)
 
-## Features
+### 📖 [Read the documentation →](https://gabrielesbaiz.github.io/duplicate-toolkit/)
 
-- ✅ Duplicate any Eloquent model record along with its underlying relationships.
+Every option, a terminal and an engineering plate that draw your model's relation
+tree in step, and a guide that covers each strategy end to end.
+
+> [!CAUTION]
+> **Upgrading from 1.x?** Read [UPGRADE.md](UPGRADE.md) first. 1.x leaked relations
+> between model classes in the same request, discovered relations by reading your
+> source files and invoking every public method, and crashed on `morphToMany`.
+> `php artisan duplicate-toolkit:upgrade` rewrites most of it; two cases need a
+> human.
+
+> [!IMPORTANT]
+> A ⭐ costs you nothing and helps other developers find this package.
+> [Sponsoring](https://github.com/sponsors/gabrielesbaiz) keeps it compatible
+> with every new Laravel release.
+
+## What it does
+
+Eloquent ships `replicate()`. It copies one row's attributes and hands back an
+unsaved model. If that is all you need, use it — one method call, no dependency.
+This package exists for the rows *underneath* the one you copied:
+
+- **Deep duplication** of `hasOne`, `hasMany`, `morphOne`, `morphMany`, `belongsToMany` and `morphToMany`, to any depth, with cycle detection.
+- **Three strategies per relation** — copy it, reference the originals, skip it — set on the model, at the call site, or with dot notation several levels down.
+- **Overrides applied before the insert**, so renaming a copy costs one write rather than two, and does not fire the events `quietly()` just suppressed.
+- **An old key → new key map** for every record created, so nothing downstream has to match duplicated rows by name.
+- **A dry run** that performs every write and rolls back, and **four Artisan commands**, one of which draws your model's relation tree.
+
+Relations are discovered by reflecting on return types — no source parsing, no
+model methods invoked, no cache shared between classes.
+
+## Requirements
+
+- PHP 8.3+
+- Laravel 12 or 13
 
 ## Installation
 
-You can install the package via composer:
-
 ```bash
 composer require gabrielesbaiz/duplicate-toolkit
+
+php artisan vendor:publish --tag=duplicate-toolkit-config
+
+php artisan duplicate-toolkit:relations "App\Models\Product" --depth=2
 ```
 
-## Usage
+Add the `HasDuplicates` trait to a model and call `$model->duplicate()`. The
+service provider is auto-discovered — no migrations, no tables, no assets — and
+publishing the config is optional, since the defaults duplicate correctly
+untouched.
 
-### Step 1
+**[Full installation guide →](https://gabrielesbaiz.github.io/duplicate-toolkit/#/install)**
 
-Your Eloquent models should use the `Gabrielesbaiz\DuplicateToolkit\Traits\HasDuplicates` trait and the `Gabrielesbaiz\DuplicateToolkit\Options\DuplicateOptions` class.   
+## Artisan commands
 
-The trait contains an abstract method `getDuplicateOptions()` that you must implement yourself.   
+| Command | Purpose |
+|---|---|
+| `duplicate-toolkit:relations {model?}` | Print the relation tree and the strategy that applies to each relation. |
+| `duplicate-toolkit:duplicate {model?} {id?}` | Duplicate a record, interactively or from flags. `--dry-run` plans it. |
+| `duplicate-toolkit:make-options {model?}` | Generate a typed `duplicateOptions()` from a relation picker. |
+| `duplicate-toolkit:upgrade {path}` | Rewrite 1.x usages to the 2.0 API. |
 
-Example:
+Every flag is on the
+[commands page](https://gabrielesbaiz.github.io/duplicate-toolkit/#/commands).
 
-```php
-<?php
+## Documentation
 
-namespace App;
-
-use Illuminate\Database\Eloquent\Model;
-use Gabrielesbaiz\DuplicateToolkit\Options\DuplicateOptions;
-use Gabrielesbaiz\DuplicateToolkit\Traits\HasDuplicates;
-
-class YourModel extends Model
-{
-    use HasDuplicates;
-    
-    /**
-     * Get the options for duplicating the model.
-     *
-     * @return DuplicateOptions
-     */
-    public function getDuplicateOptions(): DuplicateOptions
-    {
-        return DuplicateOptions::instance();
-    }
-}
-```
-
-### Step 2
-
-Once you've used the `Gabrielesbaiz\DuplicateToolkit\Traits\HasDuplicates` trait in your Eloquent models, you can duplicate model records by using the `saveAsDuplicate()` method present on that trait.
-
-```php
-$model = YourModel::find($id);
-
-$duplicatedModel = $model->saveAsDuplicate(); // returns the newly duplicated model instance
-```
-
-## Customisations
-
-### Exclude certain columns
-
-When duplicating a model, you can exclude certain columns from being duplicated by using the `excludeColumns()` method in your definition of the `getDuplicateOptions()` method.   
-   
-The fields specified in the `excludeColumns()` method will be saved with their default value (`null`, `false`, `0`, etc.)
-
-```php
-/**
- * Get the options for duplicating the model.
- *
- * @return DuplicateOptions
- */
-public function getDuplicateOptions() : DuplicateOptions
-{
-    return DuplicateOptions::instance()
-        ->excludeColumns('column_one', 'column_two');
-}
-```
-
-### Specify unique columns
-
-When duplicating a model, you can save certain columns in an unique format by using the `uniqueColumns()` method in your definition of the `getDuplicateOptions()` method.   
-   
-The fields specified in the `uniqueColumns()` method will be saved in a unique format by appending `(n)` at the end.   
-Example: **original name (1)**, **original name (2)**
-
-```php
-/**
- * Get the options for duplicating the model.
- *
- * @return DuplicateOptions
- */
-public function getDuplicateOptions() : DuplicateOptions
-{
-    return DuplicateOptions::instance()
-        ->uniqueColumns('column_one', 'column_two');
-}
-```
-
-### Exclude entire relations
-
-By default, when duplicating a model, all of its "child" relations are also duplicated along with it.   
-   
-You can exclude certain relations from being duplicated by using the `excludeRelations()` method in your definition of the `getDuplicateOptions()` method.   
-   
-The relations specified in the `excludeRelations()` method will not be duplicated along with the targeted model, meaning that the newly duplicated model will not have any records associated to it for the specified relations.
-
-```php
-/**
- * Get the options for duplicating the model.
- *
- * @return DuplicateOptions
- */
-public function getDuplicateOptions() : DuplicateOptions
-{
-    return DuplicateOptions::instance()
-        ->excludeRelations('relationOne', 'relationTwo');
-}
-```
-
-### Exclude certain columns from certain relations
-
-When duplicating a model, you can exclude certain columns of its "child" relations from being duplicated by using the `excludeRelationColumns()` method in your definition of the `getDuplicateOptions()` method.   
-   
-> This method accepts only one parameter which should be an associative array containing:   
->   **key** -> the name of a relation   
->   **value** -> an array containing the columns to exclude for that relation
-   
-The fields specified in the `excludeRelationColumns()` method will be saved with their default value (`null`, `false`, `0`, etc.)
-
-```php
-/**
- * Get the options for duplicating the model.
- *
- * @return DuplicateOptions
- */
-public function getDuplicateOptions() : DuplicateOptions
-{
-    return DuplicateOptions::instance()
-        ->excludeRelationColumns([
-            'relationOne' => ['column_one', 'column_two'],
-            'relationTwo' => ['column_one'],
-        ]);
-}
-```
-
-### Specify unique columns for certain relations
-
-When duplicating a model, you can save certain columns of its "child" relations in an unique format by using the `uniqueRelationColumns()` method in your definition of the `getDuplicateOptions()` method.   
-   
-> This method accepts only one parameter which should be an associative array containing:   
->   **key** -> the name of a relation   
->   **value** -> an array containing the unique columns for that relation   
-   
-The fields specified in the `uniqueRelationColumns()` method will be saved in an unique format by appending `(n)` at the end.   
-Example: **original relation name (1)**, **original relation name (2)**
-
-```php
-/**
- * Get the options for duplicating the model.
- *
- * @return DuplicateOptions
- */
-public function getDuplicateOptions() : DuplicateOptions
-{
-    return DuplicateOptions::instance()
-        ->uniqueRelationColumns([
-            'relationOne' => ['column_one', 'column_two'],
-            'relationTwo' => ['column_one'],
-        ]);
-}
-```
-
-### Duplicate only the targeted model
-
-If you only want to duplicate your targeted model without duplicating any relations whatsoever, you can specify this by using the `disableDeepDuplication()` method in your definition of the `getDuplicateOptions()` method.   
-   
-When using this method, all relations of all types will be ignored when duplicating the model.
-
-```php
-/**
- * Get the options for duplicating the model.
- *
- * @return DuplicateOptions
- */
-public function getDuplicateOptions() : DuplicateOptions
-{
-    return DuplicateOptions::instance()
-        ->disableDeepDuplication();
-}
-```
-
-## Events
-
-The duplicate functionality comes packed with two Eloquent events: `duplicating` and `duplicated`   
-   
-You can implement these events in your Eloquent models as you would implement any other Eloquent events that come with the Laravel framework.
-
-```php
-<?php
-
-namespace App;
-
-use Illuminate\Database\Eloquent\Model;
-use Gabrielesbaiz\DuplicateToolkit\Options\DuplicateOptions;
-use Gabrielesbaiz\DuplicateToolkit\Traits\HasDuplicates;
-
-class YourModel extends Model
-{
-    use HasDuplicates;
-
-    /**
-     * Boot the model.
-     *
-     * @return DuplicateOptions
-     */
-    public static function boot()
-    {
-        parent::boot();
-
-        static::duplicating(function ($model) {
-            // your logic here
-        });
-
-        static::duplicated(function ($model) {
-            // your logic here
-        });
-    }
-    
-    /**
-     * Get the options for duplicating the model.
-     *
-     * @return DuplicateOptions
-     */
-    public function getDuplicateOptions(): DuplicateOptions
-    {
-        return DuplicateOptions::instance();
-    }
-}
-```
+| | |
+|---|---|
+| [Documentation site](https://gabrielesbaiz.github.io/duplicate-toolkit/) | Everything: install, configure, operate. |
+| [Relation strategies](https://gabrielesbaiz.github.io/duplicate-toolkit/#/strategies) | Copy, reference, skip — and the defaults per relation type. |
+| [Configuration](https://gabrielesbaiz.github.io/duplicate-toolkit/#/config) | Every key, and its per-duplication equivalent. |
+| [Troubleshooting](https://gabrielesbaiz.github.io/duplicate-toolkit/#/trouble) | The failures people actually hit. |
+| [UPGRADE.md](UPGRADE.md) | Upgrading from 1.x. Read before you start. |
+| [CHANGELOG.md](CHANGELOG.md) | What changed, and when. |
 
 ## Testing
 
 ```bash
-composer test
+composer test        # Pest
+composer analyse     # PHPStan, level max
+composer format      # Pint
+composer rector-dry  # Rector
 ```
 
-## Changelog
-
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
+CI runs the suite on PHP 8.3 and 8.4 × Laravel 12 and 13, on both
+`prefer-lowest` and `prefer-stable`.
 
 ## Contributing
 
-Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
+Thank you for considering contributing. The guide is in
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Security Vulnerabilities
+## Security vulnerabilities
 
-Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
+Please review [SECURITY.md](SECURITY.md) for reporting a vulnerability. Please
+do not open a public issue.
 
 ## Credits
 
-- [Neurony Solutions](https://github.com/neurony)
-- [Gabriele Sbaiz](https://github.com/gabrielesbaiz)
-- [All Contributors](../../contributors)
+Written and maintained by [Gabriele Sbaiz](https://github.com/gabrielesbaiz).
+
+The 1.x line was a fork of
+[neurony/laravel-duplicate](https://github.com/neurony/laravel-duplicate) by
+Neurony Solutions, whose design informed this one. This package builds on
+Laravel and
+[spatie/laravel-package-tools](https://github.com/spatie/laravel-package-tools).
+
+## Support this package
+
+If it is useful to you:
+
+- ⭐ **Star the repo.** Free, thirty seconds, and it is the first signal other developers look at.
+- ❤️ **[Become a sponsor](https://github.com/sponsors/gabrielesbaiz).** From $5 a month.
+- 🐛 **Open a good issue.** A clear reproduction is worth more than you think.
+- 🗣️ **Tell another Laravel developer.** Word of mouth is how packages survive.
+
+[![Sponsor on GitHub](https://img.shields.io/badge/Sponsor-gabrielesbaiz-ff69b4?style=for-the-badge&logo=github-sponsors)](https://github.com/sponsors/gabrielesbaiz)
+
+## Disclaimer
+
+This package is provided **as is**, without warranty of any kind, express or
+implied, including but not limited to the warranties of merchantability,
+fitness for a particular purpose, title and non-infringement. To the fullest
+extent permitted by applicable law, in no event shall the authors, copyright
+holders or contributors be liable for any claim, damages or other liability —
+whether in an action of contract, tort or otherwise — arising from, out of or in
+connection with this package or its use, including without limitation any
+direct, indirect, incidental, special, exemplary, consequential or punitive
+damages, loss of data, loss of profits, business interruption, or corruption of
+records.
+
+This package writes to your database. It creates rows, copies relations and,
+when you ask it to, attaches existing records to new ones. Whoever deploys it is
+responsible for deciding whether the result is correct for their schema. That
+responsibility includes, and is not limited to, reviewing what each relation
+strategy will do before enabling it, running `preview()` or `--dry-run` against
+production-shaped data, keeping backups, understanding that duplicated rows may
+trigger observers, listeners, queued jobs and search indexing unless
+`quietly()` is used, and reading the code yourself before pointing it at data
+you cannot afford to lose. Nothing here constitutes legal or compliance advice.
+
+Use of this package is entirely at your own risk.
 
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+MIT. See [LICENSE.md](LICENSE.md). The MIT licence's warranty disclaimer and
+limitation of liability apply in full, alongside the disclaimer above.
